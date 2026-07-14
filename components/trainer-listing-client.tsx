@@ -13,32 +13,19 @@ import {
   MapPin,
   Search,
   SlidersHorizontal,
-  Sparkles,
   Target,
   Trophy,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { TrainerCard } from "@/components/trainer-card";
+import { filterAndSortTrainers, formatPriceInr } from "@/lib/trainer-utils";
 import {
-  filterAndSortTrainers,
-  formatPriceInr,
-} from "@/lib/trainer-utils";
+  categoryIdsToSpecs,
+  cityOptions,
+  searchCategories,
+} from "@/lib/search-categories";
 import type { Trainer, TrainerSort } from "@/lib/types";
-
-type GoalOption = {
-  id: string;
-  name: string;
-  desc: string;
-  tint: string;
-  specs: string[];
-  icon: typeof Dumbbell;
-};
-
-type CityOption = {
-  name: string;
-  trainers: string;
-};
 
 type PreferenceDialog = "onboarding" | "city" | "goal" | null;
 
@@ -46,58 +33,16 @@ const STORAGE_KEYS = {
   onboarded: "tr_onboarded",
   city: "tr_city",
   goals: "tr_goals",
-  goalText: "tr_goaltext",
 };
 
 const fallbackCity = "Bengaluru";
 
-const cityOptions: CityOption[] = [
-  { name: "Mumbai", trainers: "820 coaches" },
-  { name: "Delhi", trainers: "640 coaches" },
-  { name: "Bengaluru", trainers: "710 coaches" },
-  { name: "Pune", trainers: "390 coaches" },
-  { name: "Hyderabad", trainers: "410 coaches" },
-  { name: "Chennai", trainers: "320 coaches" },
-  { name: "Kolkata", trainers: "280 coaches" },
-  { name: "Ahmedabad", trainers: "190 coaches" },
-  { name: "Jaipur", trainers: "140 coaches" },
-  { name: "Chandigarh", trainers: "120 coaches" },
-];
-
-const goalOptions: GoalOption[] = [
-  {
-    id: "gym",
-    name: "Gym Trainer",
-    desc: "Strength, fat loss, muscle gain",
-    tint: "#F02D28",
-    specs: ["Strength", "Weight loss"],
-    icon: Dumbbell,
-  },
-  {
-    id: "sport",
-    name: "Sports Coach",
-    desc: "Cricket, football, tennis, athletics",
-    tint: "#3B8CFF",
-    specs: ["Sports", "Boxing"],
-    icon: Trophy,
-  },
-  {
-    id: "yoga",
-    name: "Yoga / Aerobics / Zumba",
-    desc: "Flexibility, mobility, group energy",
-    tint: "#A05CFF",
-    specs: ["Yoga"],
-    icon: Leaf,
-  },
-  {
-    id: "diet",
-    name: "Nutritionist / Dietitian",
-    desc: "Meal plans, weight management",
-    tint: "#1FCB6B",
-    specs: ["Nutrition", "Weight loss"],
-    icon: Apple,
-  },
-];
+const categoryIcons: Record<string, typeof Dumbbell> = {
+  gym: Dumbbell,
+  sport: Trophy,
+  yoga: Leaf,
+  diet: Apple,
+};
 
 const sortOptions: { id: TrainerSort; label: string }[] = [
   { id: "recommended", label: "Recommended" },
@@ -117,54 +62,73 @@ export function TrainerListingClient({
   trainers,
   initialQuery = "",
   initialVerified = false,
+  initialCity = "",
+  initialCategory = "",
 }: {
   trainers: Trainer[];
   initialQuery?: string;
   initialVerified?: boolean;
+  initialCity?: string;
+  initialCategory?: string;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [sort, setSort] = useState<TrainerSort>("recommended");
   const [verified, setVerified] = useState(initialVerified);
-  const [specs, setSpecs] = useState<string[]>([]);
+  const [specs, setSpecs] = useState<string[]>(() =>
+    initialCategory ? categoryIdsToSpecs([initialCategory]) : [],
+  );
   const [maxPrice, setMaxPrice] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [city, setCity] = useState(fallbackCity);
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
-  const [goalText, setGoalText] = useState("");
+  const [city, setCity] = useState(initialCity || fallbackCity);
+  const [selectedGoals, setSelectedGoals] = useState<string[]>(
+    initialCategory ? [initialCategory] : [],
+  );
   const [dialog, setDialog] = useState<PreferenceDialog>(null);
 
+  // Load saved preferences once. URL params always win, and the first-visit
+  // dialog never opens when the visitor arrived with an explicit choice.
   useEffect(() => {
+    const cameWithIntent = Boolean(initialCity || initialCategory);
+
     const timeoutId = window.setTimeout(() => {
       try {
         const storedCity = localStorage.getItem(STORAGE_KEYS.city);
         const storedGoals = parseStoredGoals(
           localStorage.getItem(STORAGE_KEYS.goals),
         );
-        const storedGoalText =
-          localStorage.getItem(STORAGE_KEYS.goalText) ?? "";
 
-        if (storedCity) {
+        if (!initialCity && storedCity) {
           setCity(storedCity);
         }
 
-        if (storedGoals.length > 0) {
+        if (!initialCategory && storedGoals.length > 0) {
           setSelectedGoals(storedGoals);
-          setSpecs(goalIdsToSpecs(storedGoals));
+          setSpecs(categoryIdsToSpecs(storedGoals));
         }
 
-        if (storedGoalText) {
-          setGoalText(storedGoalText);
-        }
-
-        if (localStorage.getItem(STORAGE_KEYS.onboarded) !== "1") {
+        if (cameWithIntent) {
+          localStorage.setItem(STORAGE_KEYS.onboarded, "1");
+          if (initialCity) {
+            localStorage.setItem(STORAGE_KEYS.city, initialCity);
+          }
+          if (initialCategory) {
+            localStorage.setItem(
+              STORAGE_KEYS.goals,
+              JSON.stringify([initialCategory]),
+            );
+          }
+        } else if (localStorage.getItem(STORAGE_KEYS.onboarded) !== "1") {
           setDialog("onboarding");
         }
       } catch {
-        setDialog("onboarding");
+        if (!cameWithIntent) {
+          setDialog("onboarding");
+        }
       }
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const specialities = useMemo(
@@ -186,12 +150,11 @@ export function TrainerListingClient({
   );
 
   const activeGoalLabel = useMemo(
-    () => formatGoalLabel(selectedGoals, goalText),
-    [goalText, selectedGoals],
+    () => formatGoalLabel(selectedGoals),
+    [selectedGoals],
   );
 
-  const filterCount =
-    (verified ? 1 : 0) + specs.length + (maxPrice ? 1 : 0);
+  const filterCount = (verified ? 1 : 0) + specs.length + (maxPrice ? 1 : 0);
 
   function toggleSpec(spec: string) {
     setSpecs((current) =>
@@ -201,42 +164,45 @@ export function TrainerListingClient({
     );
   }
 
+  // A full reset clears everything — including goal-applied specialty
+  // filters — so nobody gets stuck inside a stored goal.
   function clearFilters() {
     setVerified(false);
-    setSpecs(goalIdsToSpecs(selectedGoals));
+    setSpecs([]);
     setMaxPrice(0);
+    setSelectedGoals([]);
   }
 
-  function savePreferences(next: {
-    city?: string;
-    goals?: string[];
-    goalText?: string;
-    applyGoalFilters?: boolean;
-  }) {
-    const nextCity = next.city ?? city;
-    const nextGoals = next.goals ?? selectedGoals;
-    const nextGoalText = next.goalText ?? goalText;
-
-    setCity(nextCity);
-    setSelectedGoals(nextGoals);
-    setGoalText(nextGoalText);
-
-    if (next.applyGoalFilters ?? true) {
-      setSpecs(goalIdsToSpecs(nextGoals));
-    }
-
+  function persist(nextCity: string, nextGoals: string[]) {
     try {
       localStorage.setItem(STORAGE_KEYS.onboarded, "1");
       localStorage.setItem(STORAGE_KEYS.city, nextCity);
       localStorage.setItem(STORAGE_KEYS.goals, JSON.stringify(nextGoals));
-      if (nextGoalText.trim()) {
-        localStorage.setItem(STORAGE_KEYS.goalText, nextGoalText.trim());
-      } else {
-        localStorage.removeItem(STORAGE_KEYS.goalText);
-      }
     } catch {
-      // Local storage can be blocked in private contexts; UI state still works.
+      // Local storage can be blocked; UI state still works.
     }
+  }
+
+  function saveCity(nextCity: string) {
+    setCity(nextCity);
+    persist(nextCity, selectedGoals);
+  }
+
+  // Selecting goals seeds the specialty filters once; after that the chips
+  // are fully in the user's hands.
+  function saveGoals(nextGoals: string[]) {
+    setSelectedGoals(nextGoals);
+    setSpecs(categoryIdsToSpecs(nextGoals));
+    persist(city, nextGoals);
+  }
+
+  function skipOnboarding() {
+    try {
+      localStorage.setItem(STORAGE_KEYS.onboarded, "1");
+    } catch {
+      // Non-fatal.
+    }
+    setDialog(null);
   }
 
   const panel = (
@@ -245,6 +211,13 @@ export function TrainerListingClient({
       specs={specs}
       maxPrice={maxPrice}
       verified={verified}
+      selectedGoals={selectedGoals}
+      onToggleGoal={(goalId) => {
+        const nextGoals = selectedGoals.includes(goalId)
+          ? selectedGoals.filter((id) => id !== goalId)
+          : [...selectedGoals, goalId];
+        saveGoals(nextGoals);
+      }}
       onToggleSpec={toggleSpec}
       onToggleVerified={() => setVerified((value) => !value)}
       onPrice={setMaxPrice}
@@ -288,6 +261,34 @@ export function TrainerListingClient({
                   />
                 </button>
               </div>
+              <div className="hidden flex-none items-center md:flex">
+                <label className="relative inline-flex h-11 items-center gap-2 rounded-[13px] border border-white/10 bg-panel pl-3 pr-8 text-[12px] font-extrabold text-white">
+                  <ArrowDownWideNarrow
+                    aria-hidden="true"
+                    className="text-brand-light"
+                    size={15}
+                  />
+                  <select
+                    value={sort}
+                    onChange={(event) =>
+                      setSort(event.target.value as TrainerSort)
+                    }
+                    className="appearance-none bg-transparent font-extrabold text-white outline-none [&>option]:bg-[#141417]"
+                    aria-label="Sort trainers"
+                  >
+                    {sortOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className="pointer-events-none absolute right-3 text-brand-light"
+                    size={15}
+                  />
+                </label>
+              </div>
             </div>
 
             <div className="relative mt-4">
@@ -305,7 +306,7 @@ export function TrainerListingClient({
             </div>
 
             <div className="mt-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-              <label className="relative inline-flex h-10 flex-none items-center gap-2 rounded-full border border-brand/30 bg-brand/10 pl-3 pr-8 text-[12px] font-extrabold text-white">
+              <label className="relative inline-flex h-10 flex-none items-center gap-2 rounded-full border border-brand/30 bg-brand/10 pl-3 pr-8 text-[12px] font-extrabold text-white md:hidden">
                 <ArrowDownWideNarrow
                   aria-hidden="true"
                   className="text-brand-light"
@@ -313,8 +314,10 @@ export function TrainerListingClient({
                 />
                 <select
                   value={sort}
-                  onChange={(event) => setSort(event.target.value as TrainerSort)}
-                  className="max-w-[142px] appearance-none bg-transparent font-extrabold text-white outline-none"
+                  onChange={(event) =>
+                    setSort(event.target.value as TrainerSort)
+                  }
+                  className="max-w-[142px] appearance-none bg-transparent font-extrabold text-white outline-none [&>option]:bg-[#141417]"
                   aria-label="Sort trainers"
                 >
                   {sortOptions.map((option) => (
@@ -347,7 +350,11 @@ export function TrainerListingClient({
               <button
                 type="button"
                 onClick={() => setDialog("goal")}
-                className="inline-flex h-10 max-w-[190px] flex-none items-center gap-2 rounded-full border border-white/10 bg-panel px-3.5 text-[12px] font-extrabold text-soft transition hover:text-white"
+                className={`inline-flex h-10 max-w-[210px] flex-none items-center gap-2 rounded-full border px-3.5 text-[12px] font-extrabold transition ${
+                  selectedGoals.length > 0
+                    ? "border-brand/40 bg-brand/10 text-white"
+                    : "border-white/10 bg-panel text-soft hover:text-white"
+                }`}
               >
                 <Target
                   aria-hidden="true"
@@ -355,6 +362,26 @@ export function TrainerListingClient({
                   size={15}
                 />
                 <span className="truncate">{activeGoalLabel}</span>
+                {selectedGoals.length > 0 ? (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Clear goal"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      saveGoals([]);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.stopPropagation();
+                        saveGoals([]);
+                      }
+                    }}
+                    className="grid h-5 w-5 flex-none place-items-center rounded-full bg-white/10 transition hover:bg-brand"
+                  >
+                    <X aria-hidden="true" size={11} />
+                  </span>
+                ) : null}
               </button>
 
               {["Verified", ...specialities.slice(0, 5)].map((chip) => {
@@ -391,7 +418,7 @@ export function TrainerListingClient({
                 coaches matched
               </p>
               <p className="mt-1 text-[12px] font-semibold text-muted">
-                {activeGoalLabel === "Set your goal"
+                {selectedGoals.length === 0
                   ? `Showing available trainers near ${city}`
                   : `${activeGoalLabel} near ${city}`}
               </p>
@@ -402,7 +429,7 @@ export function TrainerListingClient({
                 onClick={clearFilters}
                 className="self-start rounded-full border border-brand/30 bg-brand/10 px-3 py-2 text-[12px] font-bold text-brand-light md:self-auto"
               >
-                Reset filters
+                Reset all filters
               </button>
             ) : null}
           </div>
@@ -477,10 +504,12 @@ export function TrainerListingClient({
         <OnboardingDialog
           initialCity={city}
           initialGoals={selectedGoals}
-          initialGoalText={goalText}
-          onClose={() => setDialog(null)}
-          onSave={(preferences) => {
-            savePreferences(preferences);
+          onSkip={skipOnboarding}
+          onSave={(nextCity, nextGoals) => {
+            setCity(nextCity);
+            setSelectedGoals(nextGoals);
+            setSpecs(categoryIdsToSpecs(nextGoals));
+            persist(nextCity, nextGoals);
             setDialog(null);
           }}
         />
@@ -491,7 +520,7 @@ export function TrainerListingClient({
           initialCity={city}
           onClose={() => setDialog(null)}
           onSave={(nextCity) => {
-            savePreferences({ city: nextCity, applyGoalFilters: false });
+            saveCity(nextCity);
             setDialog(null);
           }}
         />
@@ -500,10 +529,9 @@ export function TrainerListingClient({
       {dialog === "goal" ? (
         <GoalDialog
           initialGoals={selectedGoals}
-          initialGoalText={goalText}
           onClose={() => setDialog(null)}
-          onSave={(goals, text) => {
-            savePreferences({ goals, goalText: text, applyGoalFilters: true });
+          onSave={(goals) => {
+            saveGoals(goals);
             setDialog(null);
           }}
         />
@@ -517,6 +545,8 @@ function FilterPanel({
   specs,
   maxPrice,
   verified,
+  selectedGoals,
+  onToggleGoal,
   onToggleSpec,
   onToggleVerified,
   onPrice,
@@ -526,6 +556,8 @@ function FilterPanel({
   specs: string[];
   maxPrice: number;
   verified: boolean;
+  selectedGoals: string[];
+  onToggleGoal: (goalId: string) => void;
   onToggleSpec: (spec: string) => void;
   onToggleVerified: () => void;
   onPrice: (price: number) => void;
@@ -544,6 +576,52 @@ function FilterPanel({
         >
           Clear all
         </button>
+      </div>
+
+      <div className="mb-6">
+        <p className="mb-3 text-[10px] font-extrabold uppercase text-muted">
+          Coach type
+        </p>
+        <div className="grid gap-2">
+          {searchCategories.map((category) => {
+            const Icon = categoryIcons[category.id] ?? Dumbbell;
+            const active = selectedGoals.includes(category.id);
+            return (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() => onToggleGoal(category.id)}
+                className={`flex items-center gap-3 rounded-[13px] border p-3 text-left transition ${
+                  active
+                    ? "border-brand/60 bg-brand/10"
+                    : "border-white/10 bg-panel hover:border-white/20"
+                }`}
+              >
+                <span
+                  className="grid h-9 w-9 flex-none place-items-center rounded-[10px]"
+                  style={{
+                    backgroundColor: active
+                      ? category.tint
+                      : `${category.tint}22`,
+                    color: active ? "#ffffff" : category.tint,
+                  }}
+                >
+                  <Icon aria-hidden="true" size={17} />
+                </span>
+                <span className="min-w-0 flex-1 text-[13px] font-extrabold text-white">
+                  {category.shortLabel}
+                </span>
+                {active ? (
+                  <Check
+                    aria-hidden="true"
+                    className="flex-none text-brand-light"
+                    size={16}
+                  />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="mb-6">
@@ -627,47 +705,27 @@ function FilterPanel({
 function OnboardingDialog({
   initialCity,
   initialGoals,
-  initialGoalText,
-  onClose,
+  onSkip,
   onSave,
 }: {
   initialCity: string;
   initialGoals: string[];
-  initialGoalText: string;
-  onClose: () => void;
-  onSave: (preferences: {
-    city: string;
-    goals: string[];
-    goalText: string;
-    applyGoalFilters: boolean;
-  }) => void;
+  onSkip: () => void;
+  onSave: (city: string, goals: string[]) => void;
 }) {
   const [step, setStep] = useState(0);
   const [city, setCity] = useState(initialCity);
   const [cityQuery, setCityQuery] = useState(initialCity);
   const [goals, setGoals] = useState(initialGoals);
-  const [goalText, setGoalText] = useState(initialGoalText);
-  const canContinue = step === 0 ? Boolean(city) : hasGoal(goals, goalText);
-
-  function finish() {
-    if (!hasGoal(goals, goalText)) {
-      return;
-    }
-
-    onSave({
-      city,
-      goals,
-      goalText,
-      applyGoalFilters: true,
-    });
-  }
+  const canContinue = step === 0 ? Boolean(city) : true;
 
   return (
     <DialogFrame
-      title={step === 0 ? "Which city are you training in?" : "Who are you looking for?"}
+      title={
+        step === 0 ? "Which city are you training in?" : "Who are you looking for?"
+      }
       kicker={step === 0 ? "Step 1 · Your city" : "Step 2 · Your goal"}
-      onClose={onClose}
-      showClose={false}
+      onClose={onSkip}
     >
       <div className="mb-5 flex gap-2">
         {[0, 1].map((index) => (
@@ -696,13 +754,11 @@ function OnboardingDialog({
       ) : (
         <GoalStep
           goals={goals}
-          goalText={goalText}
           onToggle={(goalId) => setGoals(toggleValue(goals, goalId))}
-          onGoalText={setGoalText}
         />
       )}
 
-      <div className="mt-6 flex gap-3">
+      <div className="mt-6 flex items-center gap-3">
         {step === 1 ? (
           <button
             type="button"
@@ -711,7 +767,15 @@ function OnboardingDialog({
           >
             Back
           </button>
-        ) : null}
+        ) : (
+          <button
+            type="button"
+            onClick={onSkip}
+            className="h-12 px-2 text-sm font-extrabold text-muted transition hover:text-white"
+          >
+            Skip
+          </button>
+        )}
         <button
           type="button"
           disabled={!canContinue}
@@ -722,12 +786,16 @@ function OnboardingDialog({
             if (step === 0) {
               setStep(1);
             } else {
-              finish();
+              onSave(city || fallbackCity, goals);
             }
           }}
           className="h-12 flex-1 rounded-[14px] bg-brand px-5 text-sm font-extrabold text-white transition disabled:bg-white/10 disabled:text-muted"
         >
-          {step === 0 ? "Continue" : "Show me coaches"}
+          {step === 0
+            ? "Continue"
+            : goals.length > 0
+              ? "Show me coaches"
+              : "Show me everyone"}
         </button>
       </div>
     </DialogFrame>
@@ -774,34 +842,37 @@ function CityDialog({
 
 function GoalDialog({
   initialGoals,
-  initialGoalText,
   onClose,
   onSave,
 }: {
   initialGoals: string[];
-  initialGoalText: string;
   onClose: () => void;
-  onSave: (goals: string[], goalText: string) => void;
+  onSave: (goals: string[]) => void;
 }) {
   const [goals, setGoals] = useState(initialGoals);
-  const [goalText, setGoalText] = useState(initialGoalText);
 
   return (
     <DialogFrame title="Edit goal" kicker="Training target" onClose={onClose}>
       <GoalStep
         goals={goals}
-        goalText={goalText}
         onToggle={(goalId) => setGoals(toggleValue(goals, goalId))}
-        onGoalText={setGoalText}
       />
-      <button
-        type="button"
-        disabled={!hasGoal(goals, goalText)}
-        onClick={() => onSave(goals, goalText)}
-        className="mt-6 h-12 w-full rounded-[14px] bg-brand px-5 text-sm font-extrabold text-white transition disabled:bg-white/10 disabled:text-muted"
-      >
-        Save goal
-      </button>
+      <div className="mt-6 flex gap-3">
+        <button
+          type="button"
+          onClick={() => onSave([])}
+          className="h-12 rounded-[14px] border border-white/10 bg-panel px-5 text-sm font-extrabold text-soft transition hover:text-white"
+        >
+          Clear goal
+        </button>
+        <button
+          type="button"
+          onClick={() => onSave(goals)}
+          className="h-12 flex-1 rounded-[14px] bg-brand px-5 text-sm font-extrabold text-white transition"
+        >
+          Save goal
+        </button>
+      </div>
     </DialogFrame>
   );
 }
@@ -811,12 +882,10 @@ function DialogFrame({
   kicker,
   children,
   onClose,
-  showClose = true,
 }: {
   title: string;
   kicker: string;
   onClose: () => void;
-  showClose?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -831,16 +900,14 @@ function DialogFrame({
               {title}
             </h2>
           </div>
-          {showClose ? (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close"
-              className="grid h-10 w-10 flex-none place-items-center rounded-[13px] border border-white/10 bg-panel text-white"
-            >
-              <X aria-hidden="true" size={18} />
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="grid h-10 w-10 flex-none place-items-center rounded-[13px] border border-white/10 bg-panel text-white"
+          >
+            <X aria-hidden="true" size={18} />
+          </button>
         </div>
         {children}
       </div>
@@ -875,7 +942,7 @@ function CityStep({
           value={query}
           onChange={(event) => onQuery(event.target.value)}
           placeholder="Search your city"
-          className="h-13 w-full rounded-[14px] border border-white/10 bg-panel pl-12 pr-4 text-sm font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand/60"
+          className="h-13 w-full rounded-[14px] border border-white/10 bg-panel py-3.5 pl-12 pr-4 text-sm font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand/60"
         />
       </div>
 
@@ -903,7 +970,7 @@ function CityStep({
                   {option.name}
                 </span>
                 <span className="mt-1 block text-[12px] font-semibold text-muted">
-                  {option.trainers}
+                  {option.note}
                 </span>
               </span>
               {selected ? (
@@ -929,26 +996,22 @@ function CityStep({
 
 function GoalStep({
   goals,
-  goalText,
   onToggle,
-  onGoalText,
 }: {
   goals: string[];
-  goalText: string;
   onToggle: (goalId: string) => void;
-  onGoalText: (value: string) => void;
 }) {
   return (
     <div>
       <div className="grid gap-2">
-        {goalOptions.map((goal) => {
-          const selected = goals.includes(goal.id);
-          const Icon = goal.icon;
+        {searchCategories.map((category) => {
+          const selected = goals.includes(category.id);
+          const Icon = categoryIcons[category.id] ?? Dumbbell;
           return (
             <button
-              key={goal.id}
+              key={category.id}
               type="button"
-              onClick={() => onToggle(goal.id)}
+              onClick={() => onToggle(category.id)}
               className={`flex items-center gap-4 rounded-[15px] border p-4 text-left transition ${
                 selected
                   ? "border-brand/60 bg-brand/10"
@@ -958,18 +1021,20 @@ function GoalStep({
               <span
                 className="grid h-11 w-11 flex-none place-items-center rounded-[13px]"
                 style={{
-                  backgroundColor: selected ? goal.tint : `${goal.tint}22`,
-                  color: selected ? "#ffffff" : goal.tint,
+                  backgroundColor: selected
+                    ? category.tint
+                    : `${category.tint}22`,
+                  color: selected ? "#ffffff" : category.tint,
                 }}
               >
                 <Icon aria-hidden="true" size={21} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block font-display text-[15px] font-extrabold text-white">
-                  {goal.name}
+                  {category.label}
                 </span>
                 <span className="mt-1 block text-[12px] font-semibold text-muted">
-                  {goal.desc}
+                  {category.description}
                 </span>
               </span>
               <span
@@ -987,28 +1052,10 @@ function GoalStep({
           );
         })}
       </div>
-
-      <div className="my-5 flex items-center gap-3">
-        <span className="h-px flex-1 bg-white/10" />
-        <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-muted">
-          Or describe it
-        </span>
-        <span className="h-px flex-1 bg-white/10" />
-      </div>
-
-      <div className="rounded-[16px] border border-white/10 bg-panel p-4">
-        <div className="mb-3 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em] text-white">
-          <Sparkles aria-hidden="true" className="text-brand-light" size={16} />
-          Goal notes
-        </div>
-        <textarea
-          value={goalText}
-          onChange={(event) => onGoalText(event.target.value)}
-          rows={4}
-          placeholder="e.g. Lose 10 kg, get stronger, train around a knee injury, or prepare for a sport."
-          className="w-full resize-none rounded-[12px] border border-white/10 bg-black/35 p-3 text-sm font-semibold leading-6 text-white outline-none transition placeholder:text-muted focus:border-brand/60"
-        />
-      </div>
+      <p className="mt-4 text-[12px] font-semibold leading-5 text-muted">
+        Picking a goal pre-selects matching specialities — you can change or
+        clear them any time from the filters.
+      </p>
     </div>
   );
 }
@@ -1027,40 +1074,22 @@ function parseStoredGoals(value: string | null) {
     return parsed.filter(
       (item): item is string =>
         typeof item === "string" &&
-        goalOptions.some((goal) => goal.id === item),
+        searchCategories.some((category) => category.id === item),
     );
   } catch {
     return [];
   }
 }
 
-function goalIdsToSpecs(goalIds: string[]) {
-  return Array.from(
-    new Set(
-      goalOptions
-        .filter((goal) => goalIds.includes(goal.id))
-        .flatMap((goal) => goal.specs),
-    ),
-  );
-}
-
-function formatGoalLabel(goalIds: string[], goalText: string) {
-  if (goalIds.length === 0 && goalText.trim()) {
-    return goalText.trim();
-  }
-
+function formatGoalLabel(goalIds: string[]) {
   if (goalIds.length === 0) {
     return "Set your goal";
   }
 
-  return goalOptions
-    .filter((goal) => goalIds.includes(goal.id))
-    .map((goal) => goal.name)
+  return searchCategories
+    .filter((category) => goalIds.includes(category.id))
+    .map((category) => category.shortLabel)
     .join(", ");
-}
-
-function hasGoal(goals: string[], goalText: string) {
-  return goals.length > 0 || goalText.trim().length > 0;
 }
 
 function toggleValue(values: string[], value: string) {

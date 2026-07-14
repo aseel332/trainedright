@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { LogIn, Menu, Search, UserRound, X } from "lucide-react";
+import { LogIn, Menu, Search, X } from "lucide-react";
 
 export function HeaderActions() {
   const [open, setOpen] = useState(false);
@@ -41,20 +41,12 @@ export function HeaderActions() {
             Browse coaches
           </Link>
           <Link
-            href="/trainer/dashboard"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-3 border-b border-white/10 px-4 py-3 text-sm font-bold text-white"
-          >
-            <UserRound aria-hidden="true" size={17} />
-            Create trainer profile
-          </Link>
-          <Link
-            href="/trainer/dashboard"
+            href="/trainer/auth?mode=signin&next=/trainer/dashboard"
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-brand-light"
           >
             <LogIn aria-hidden="true" size={17} />
-            Trainer log in
+            Trainer access
           </Link>
         </div>
       ) : null}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { TrainerListingClient } from "@/components/trainer-listing-client";
 import { getTrainers } from "@/lib/data";
+import { searchCategories } from "@/lib/search-categories";
 
 export const metadata: Metadata = {
   title: "Browse Trainers | TrainedRight",
@@ -15,6 +16,12 @@ export default async function TrainersPage({
   const params = await searchParams;
   const query = typeof params.q === "string" ? params.q : "";
   const verified = params.verified === "true";
+  const city = typeof params.city === "string" ? params.city : "";
+  const cat =
+    typeof params.cat === "string" &&
+    searchCategories.some((category) => category.id === params.cat)
+      ? params.cat
+      : "";
   const trainers = await getTrainers();
 
   return (
@@ -23,6 +30,8 @@ export default async function TrainersPage({
         trainers={trainers}
         initialQuery={query}
         initialVerified={verified}
+        initialCity={city}
+        initialCategory={cat}
       />
     </main>
   );

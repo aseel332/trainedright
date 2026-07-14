@@ -12,7 +12,7 @@ export function SiteHeader() {
             href="/trainers"
             className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-white transition hover:border-brand/50 hover:text-brand-light"
           >
-            Browse coaches
+            Find coaches
           </Link>
           <Link
             href="/trainers?verified=true"
@@ -21,7 +21,7 @@ export function SiteHeader() {
             Verified
           </Link>
           <Link
-            href="/trainer/dashboard"
+            href="/trainer"
             className="rounded-full px-4 py-2 text-sm font-bold text-soft transition hover:text-white"
           >
             For trainers
