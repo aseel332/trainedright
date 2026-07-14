@@ -217,7 +217,7 @@ export function TrainerDashboardClient({
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[264px_minmax(0,1fr)] lg:px-8">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[264px_minmax(0,1fr)] lg:px-8">
         {/* Sidebar */}
         <aside className="lg:sticky lg:top-[84px] lg:self-start">
           <nav className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-1">
@@ -617,7 +617,7 @@ function OverviewSection({
               ))}
             </div>
 
-            <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+            <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
               {/* Trend */}
               <div className="rounded-[18px] border border-white/10 bg-panel p-4">
                 <div className="flex items-center justify-between gap-3">
@@ -675,7 +675,7 @@ function OverviewSection({
       </div>
 
       {/* Quick actions */}
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <button
           type="button"
           onClick={() => goTo("reviews")}
@@ -772,7 +772,7 @@ function ProfileEditor({
 }) {
   return (
     <div className="space-y-7">
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <LabeledInput
           label="Name"
           value={profile.name}
@@ -1414,7 +1414,7 @@ function TransformationsSectionPanel({
     >
       <div className="space-y-6">
         {/* Mode picker */}
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {(
             [
               {
@@ -1458,7 +1458,7 @@ function TransformationsSectionPanel({
 
         {/* Create form */}
         <div className="rounded-[18px] border border-brand/25 bg-brand/[0.06] p-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <input
               value={clientName}
               onChange={(event) => setClientName(event.target.value)}

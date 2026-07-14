@@ -288,7 +288,23 @@ export async function submitReviewByToken(input: {
     return { ok: false, error: "Add a rating and a few words." };
   }
 
-  const { data, error } = await ctx.supabase
+  // Anon RLS only exposes pending rows, so check first and update without
+  // RETURNING (the submitted row is no longer selectable by anon).
+  const { data: existing } = await ctx.supabase
+    .from("review_requests")
+    .select("id")
+    .eq("id", input.token)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  if (!existing) {
+    return {
+      ok: false,
+      error: "This link was already used or is no longer active.",
+    };
+  }
+
+  const { error } = await ctx.supabase
     .from("review_requests")
     .update({
       status: "submitted",
@@ -297,18 +313,10 @@ export async function submitReviewByToken(input: {
       submitted_at: new Date().toISOString(),
     })
     .eq("id", input.token)
-    .eq("status", "pending")
-    .select("id");
+    .eq("status", "pending");
 
   if (error) {
     return { ok: false, error: error.message };
-  }
-
-  if (!data || data.length === 0) {
-    return {
-      ok: false,
-      error: "This link was already used or is no longer active.",
-    };
   }
 
   return { ok: true };
@@ -351,22 +359,29 @@ export async function submitTransformationByToken(input: {
   if (input.beforeImageUrl) update.before_image_url = input.beforeImageUrl;
   if (input.afterImageUrl) update.after_image_url = input.afterImageUrl;
 
-  const { data, error } = await ctx.supabase
+  // Same pattern as reviews: pre-check, then update without RETURNING.
+  const { data: existing } = await ctx.supabase
     .from("transformation_requests")
-    .update(update)
+    .select("id")
     .eq("id", input.token)
     .eq("status", "pending")
-    .select("id");
+    .maybeSingle();
 
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-
-  if (!data || data.length === 0) {
+  if (!existing) {
     return {
       ok: false,
       error: "This link was already used or is no longer active.",
     };
+  }
+
+  const { error } = await ctx.supabase
+    .from("transformation_requests")
+    .update(update)
+    .eq("id", input.token)
+    .eq("status", "pending");
+
+  if (error) {
+    return { ok: false, error: error.message };
   }
 
   return { ok: true };

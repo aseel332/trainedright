@@ -75,29 +75,38 @@ const walkthroughSteps = [
 ];
 
 function useReveal() {
-  const ref = useRef<HTMLDivElement | null>(null);
+  const ref = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const node = ref.current;
-    if (!node) {
+    if (!node || typeof IntersectionObserver === "undefined") {
       return;
     }
 
     const targets = node.querySelectorAll(".reveal");
+    // Only hide elements once the observer is actually in place, so the page
+    // never renders blank when JS is delayed or unavailable.
+    node.classList.add("reveal-ready");
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
+          // Reveal anything on screen or already scrolled past (e.g. after
+          // scroll restoration), regardless of element height.
+          if (entry.isIntersecting || entry.boundingClientRect.top < 0) {
             entry.target.classList.add("is-visible");
             observer.unobserve(entry.target);
           }
         });
       },
-      { threshold: 0.18 },
+      { threshold: 0 },
     );
 
     targets.forEach((target) => observer.observe(target));
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      node.classList.remove("reveal-ready");
+    };
   }, []);
 
   return ref;
@@ -135,7 +144,10 @@ export function TrainerLandingClient() {
   }, []);
 
   return (
-    <main ref={pageRef} className="min-h-screen bg-background text-white">
+    <main
+      ref={pageRef}
+      className="min-h-screen overflow-x-clip bg-background text-white"
+    >
       {/* Minimal nav */}
       <header className="absolute inset-x-0 top-0 z-40">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-5 sm:px-6 lg:px-8">
@@ -247,8 +259,8 @@ export function TrainerLandingClient() {
           </h2>
         </div>
 
-        <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
-          <div>
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-16">
+          <div className="min-w-0">
             {walkthroughSteps.map((step, index) => {
               const Icon = step.icon;
               const active = activeStep === index;
@@ -258,9 +270,15 @@ export function TrainerLandingClient() {
                   ref={(node) => {
                     stepRefs.current[index] = node;
                   }}
-                  className={`reveal border-l-2 py-10 pl-6 transition-colors duration-300 lg:min-h-[46vh] ${
-                    active ? "border-brand" : "border-white/10"
-                  }`}
+                  // Border color lives in style, not className: React rewrites
+                  // className on re-render, which would strip the observer's
+                  // imperatively added `is-visible` class.
+                  className="reveal border-l-2 py-10 pl-6 transition-colors duration-300 lg:min-h-[46vh]"
+                  style={{
+                    borderColor: active
+                      ? "#f02d28"
+                      : "rgba(255, 255, 255, 0.1)",
+                  }}
                 >
                   <span
                     className={`inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.14em] ${
@@ -284,7 +302,7 @@ export function TrainerLandingClient() {
             })}
           </div>
 
-          <div className="hidden lg:block">
+          <div className="hidden min-w-0 lg:block">
             <div className="sticky top-24">
               <WalkthroughVisual step={activeStep} />
             </div>
@@ -306,7 +324,7 @@ export function TrainerLandingClient() {
               </h2>
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {lifeVideos.map((video) => (
               <figure
                 key={video.src}
@@ -333,7 +351,7 @@ export function TrainerLandingClient() {
 
       {/* Value props */}
       <section className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {[
             {
               icon: Wallet,

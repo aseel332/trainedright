@@ -111,7 +111,7 @@ export default async function Home() {
             </h2>
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {searchCategories.map((category) => (
             <Link
               key={category.id}
@@ -140,7 +140,7 @@ export default async function Home() {
       {/* How it works */}
       <section className="border-y border-white/10 bg-panel/40">
         <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-center">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-center">
             <div>
               <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-brand-light">
                 How it works
@@ -153,7 +153,7 @@ export default async function Home() {
                 every review with a verified badge came directly from a client.
               </p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {howItWorks.map((step, index) => {
                 const Icon = step.icon;
                 return (

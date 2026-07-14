@@ -167,7 +167,7 @@ export function TransformationSubmitClient({
                   <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
                     About you
                   </p>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <input
                       value={clientName}
                       onChange={(event) => setClientName(event.target.value)}

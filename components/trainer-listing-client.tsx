@@ -435,7 +435,7 @@ export function TrainerListingClient({
           </div>
 
           {results.length > 0 ? (
-            <div className="grid gap-0 md:grid-cols-2 md:gap-4 desktop-listing-results">
+            <div className="grid grid-cols-1 gap-0 md:grid-cols-2 md:gap-4 desktop-listing-results">
               {results.map((trainer) => (
                 <TrainerCard key={trainer.id} trainer={trainer} showPrice />
               ))}
@@ -582,7 +582,7 @@ function FilterPanel({
         <p className="mb-3 text-[10px] font-extrabold uppercase text-muted">
           Coach type
         </p>
-        <div className="grid gap-2">
+        <div className="grid grid-cols-1 gap-2">
           {searchCategories.map((category) => {
             const Icon = categoryIcons[category.id] ?? Dumbbell;
             const active = selectedGoals.includes(category.id);
@@ -946,7 +946,7 @@ function CityStep({
         />
       </div>
 
-      <div className="mt-4 grid gap-2">
+      <div className="mt-4 grid grid-cols-1 gap-2">
         {filteredCities.map((option) => {
           const selected = city === option.name;
           return (
@@ -1003,7 +1003,7 @@ function GoalStep({
 }) {
   return (
     <div>
-      <div className="grid gap-2">
+      <div className="grid grid-cols-1 gap-2">
         {searchCategories.map((category) => {
           const selected = goals.includes(category.id);
           const Icon = categoryIcons[category.id] ?? Dumbbell;

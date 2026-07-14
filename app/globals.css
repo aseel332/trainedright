@@ -35,7 +35,10 @@ input {
   color: #ffffff;
 }
 
-.reveal {
+/* Reveal-on-scroll is opt-in: elements stay fully visible until the client
+   marks the page `reveal-ready`, so content never disappears if JS is slow
+   or fails. */
+.reveal-ready .reveal {
   opacity: 0;
   transform: translateY(26px);
   transition:
@@ -43,13 +46,13 @@ input {
     transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.reveal.is-visible {
+.reveal-ready .reveal.is-visible {
   opacity: 1;
   transform: translateY(0);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .reveal {
+  .reveal-ready .reveal {
     opacity: 1;
     transform: none;
     transition: none;

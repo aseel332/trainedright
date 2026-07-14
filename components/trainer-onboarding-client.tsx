@@ -1094,7 +1094,7 @@ export function PlansEditor({
         <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
           New plan
         </p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
@@ -1258,7 +1258,7 @@ export function CredentialsEditor({
         <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
           New qualification / award
         </p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <input
             value={title}
             onChange={(event) => setTitle(event.target.value)}

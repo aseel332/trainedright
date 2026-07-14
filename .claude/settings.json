@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:3111/)",
+      "Bash(curl -s http://localhost:3111/trainer)",
+      "Bash(curl -s http://localhost:3111/review/not-a-token)",
+      "Bash(curl -s -o /dev/null -w \"%{redirect_url}\\\\n\" http://localhost:3111/trainer/dashboard)",
+      "Bash(curl -s \"http://localhost:3111/trainers?city=Mumbai&cat=yoga\")",
+      "Bash(curl -s \"http://localhost:3111/trainers\")",
+      "Bash(grep -o 'Coach type.\\\\{0,400\\\\}')",
+      "Bash(npx tsc *)",
+      "Bash(pkill -f \"next start\")",
+      "Bash(pkill -f \"next-server\")",
+      "Bash(curl -s -o /dev/null -m 2 -w \"%{http_code}\" http://localhost:3111/)",
+      "Bash(pkill -9 -f \"next\")",
+      "Bash(npx playwright *)",
+      "Bash(ls ~/.cache/ms-playwright/ 2>/dev/null || echo \"no browsers cached\")",
+      "Read(//root/.cache/ms-playwright/**)"
+    ]
+  }
+}
