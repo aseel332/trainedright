@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#141416;font-family:Manrope,system-ui,sans-serif;display:flex;justify-content:center;padding:40px 0}
+  a{color:#FF5A46}a:hover{color:#F02D28}
+  input,button{font-family:inherit}
+  input::placeholder{color:#5f5f66}
+  .lst-scroll{overflow-y:auto;-ms-overflow-style:none;scrollbar-width:none}
+  .lst-scroll::-webkit-scrollbar{display:none}
+  .chips{display:flex;gap:8px;overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  ::selection{background:#F02D28;color:#fff}
+</style>
+</helmet>
+
+<div style="width:392px;background:#0a0a0b;border-radius:46px;padding:11px;box-shadow:0 24px 60px rgba(0,0,0,.45);border:1px solid rgba(0,0,0,.4)">
+  <div data-screen-label="Coaches listing" style="background:#0a0a0b;border-radius:36px;overflow:hidden;color:#fff;height:812px;display:flex;flex-direction:column;position:relative">
+
+    <!-- HEADER (fixed) -->
+    <div style="flex:none;background:#0a0a0b;border-bottom:1px solid #17171a">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 26px 6px;font:600 13px Manrope;color:#f2f2f2">
+        <span>9:41</span>
+        <span style="display:flex;gap:6px;align-items:center;opacity:.9">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="1.5" width="3" height="10.5" rx="1" opacity=".5"/><rect x="15" y="0" width="3" height="12" rx="1" opacity=".5"/></svg>
+          <svg width="22" height="12" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="19" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="3" y="3" width="13" height="6" rx="1.5" fill="currentColor"/><rect x="21" y="4" width="2" height="4" rx="1" fill="currentColor" fill-opacity=".5"/></svg>
+        </span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 20px 12px">
+        <a href="Home Page.dc.html" style="width:38px;height:38px;flex:none;border-radius:12px;border:1px solid #26262b;background:#161619;color:#fff;display:flex;align-items:center;justify-content:center;text-decoration:none">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </a>
+        <div style="flex:1;min-width:0">
+          <div style="font:700 9px Archivo;letter-spacing:.12em;color:#7d7d84">COACHES IN</div>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="font-family:Archivo;font-weight:900;font-size:18px;letter-spacing:-.02em;color:#fff">{{ city }}</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FF5A46" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:0 20px 12px">
+        <div style="position:relative">
+          <svg style="position:absolute;left:14px;top:50%;transform:translateY(-50%)" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7d7d84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <input value="{{ query }}" onInput="{{ onSearch }}" placeholder="Search name or speciality" style="width:100%;box-sizing:border-box;background:#161619;border:1.5px solid #26262b;border-radius:13px;padding:12px 14px 12px 40px;color:#fff;font:500 13.5px Manrope;outline:none">
+        </div>
+      </div>
+
+      <!-- controls -->
+      <div style="display:flex;align-items:center;gap:8px;padding:0 20px 14px">
+        <button onClick="{{ onToggleSort }}" style="flex:none;display:inline-flex;align-items:center;gap:6px;background:#161619;border:1px solid #2a2a30;border-radius:999px;padding:8px 13px;color:#fff;cursor:pointer;font:700 11.5px Manrope">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5h10M11 9h7M11 13h4M3 17l3 3 3-3M6 18V4"/></svg>
+          {{ sortLabel }}
+        </button>
+        <button onClick="{{ onOpenFilters }}" style="flex:none;display:inline-flex;align-items:center;gap:6px;background:{{ filterBtnBg }};border:1px solid {{ filterBtnBorder }};border-radius:999px;padding:8px 13px;color:#fff;cursor:pointer;font:700 11.5px Manrope">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
+          Filters
+          <sc-if value="{{ filterCount }}" hint-placeholder-val="{{ 0 }}">
+            <span style="min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#F02D28;color:#fff;font:800 9px Manrope;display:inline-flex;align-items:center;justify-content:center">{{ filterCount }}</span>
+          </sc-if>
+        </button>
+        <div class="chips" style="flex:1">
+          <sc-for list="{{ quickChips }}" as="c" hint-placeholder-count="4">
+            <button onClick="{{ c.onClick }}" style="flex:none;background:{{ c.bg }};border:1px solid {{ c.border }};border-radius:999px;padding:8px 12px;color:{{ c.color }};cursor:pointer;font:700 11.5px Manrope;white-space:nowrap">{{ c.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <!-- SORT POPOVER -->
+    <sc-if value="{{ sortOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ onCloseSort }}" style="position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.3)"></div>
+      <div style="position:absolute;z-index:21;left:20px;top:210px;background:#161619;border:1px solid #2a2a30;border-radius:16px;padding:6px;box-shadow:0 18px 40px rgba(0,0,0,.5);width:220px">
+        <sc-for list="{{ sortOptions }}" as="o" hint-placeholder-count="4">
+          <button onClick="{{ o.onClick }}" style="display:flex;align-items:center;justify-content:space-between;width:100%;text-align:left;background:{{ o.bg }};border:none;border-radius:11px;padding:11px 13px;cursor:pointer;font:600 13px Manrope;color:#fff">
+            {{ o.label }}
+            <sc-if value="{{ o.active }}" hint-placeholder-val="{{ false }}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF5A46" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            </sc-if>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <!-- RESULTS -->
+    <div class="lst-scroll" style="flex:1;padding:14px 20px 26px">
+      <div style="font:700 11px Manrope;color:#8a8a92;margin-bottom:14px"><span style="color:#fff;font-weight:800">{{ resultCount }}</span> coaches{{ matchNote }}</div>
+
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <sc-for list="{{ results }}" as="t" hint-placeholder-count="5">
+          <a href="Trainer Profile.dc.html" style="display:flex;gap:14px;padding:16px 0;border-bottom:1px solid #1f1f24;text-decoration:none">
+            <div style="flex:0 0 108px;height:144px;border-radius:15px;overflow:hidden;background:#221215;position:relative">
+              <img src="{{ t.img }}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover">
+              <div style="position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:999px;background:rgba(10,10,11,.72);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center">
+                <sc-if value="{{ t.isAward }}" hint-placeholder-val="{{ true }}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3B8CFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+                </sc-if>
+                <sc-if value="{{ t.isLoved }}" hint-placeholder-val="{{ false }}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#FF3B34" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </sc-if>
+                <sc-if value="{{ t.isVerified }}" hint-placeholder-val="{{ false }}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1FCB6B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                </sc-if>
+                <sc-if value="{{ t.moreBadges }}" hint-placeholder-val="{{ 1 }}">
+                  <span style="position:absolute;right:-5px;bottom:-5px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;background:rgba(10,10,11,.9);border:1px solid rgba(255,255,255,.16);color:#fff;font:800 8px Manrope;display:flex;align-items:center;justify-content:center;line-height:1">+{{ t.moreBadges }}</span>
+                </sc-if>
+              </div>
+            </div>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;padding-top:1px">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+                <span style="font-family:Archivo;font-weight:800;font-size:18px;letter-spacing:-.02em;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.name }}</span>
+                <span style="flex:none;display:inline-flex;align-items:center;gap:4px">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#F02D28" style="flex:none"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                  <span style="font:800 12.5px Manrope;color:#fff">{{ t.rating }}</span>
+                </span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font:600 10.5px Manrope;color:#8a8a92">
+                <span>{{ t.reviews }} reviews</span>
+                <span style="width:3px;height:3px;border-radius:999px;background:#4a4a52"></span>
+                <span style="display:inline-flex;align-items:center;gap:4px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>{{ t.years }} yrs exp</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <sc-for list="{{ t.tags }}" as="tag" hint-placeholder-count="2">
+                  <span style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#c2c2ca;border-radius:999px;padding:4px 9px;font:600 10px Manrope">{{ tag }}</span>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:7px;align-items:flex-start;margin-top:1px">
+                <span style="font-family:Archivo;font-weight:900;font-size:28px;line-height:.62;color:rgba(240,45,40,.55);flex:none;margin-top:4px">&#8220;</span>
+                <div style="font:400 11px/1.5 Manrope;font-style:italic;color:#9a9aa2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ t.review }}</div>
+              </div>
+            </div>
+          </a>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;padding:50px 24px;color:#8a8a92">
+          <div style="font:800 15px Archivo;color:#fff">No coaches match</div>
+          <div style="font:400 12.5px/1.6 Manrope;margin-top:8px">Try clearing a filter or searching a different speciality.</div>
+          <button onClick="{{ onClearAll }}" style="margin-top:16px;background:rgba(240,45,40,.12);border:1px solid rgba(240,45,40,.3);color:#FF5A46;border-radius:12px;padding:10px 18px;cursor:pointer;font:700 12px Manrope">Clear all filters</button>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- FILTER SHEET -->
+    <sc-if value="{{ filtersOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ onCloseFilters }}" style="position:absolute;inset:0;z-index:30;background:rgba(0,0,0,.55)"></div>
+      <div style="position:absolute;z-index:31;left:0;right:0;bottom:0;background:#111114;border-top:1px solid #26262b;border-radius:28px 28px 0 0;padding:8px 22px 26px;max-height:76%;display:flex;flex-direction:column">
+        <div style="width:40px;height:4px;border-radius:999px;background:#33333a;margin:6px auto 16px"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <span style="font-family:Archivo;font-weight:900;font-size:21px;letter-spacing:-.02em;color:#fff">Filters</span>
+          <button onClick="{{ onClearAll }}" style="background:none;border:none;color:#FF5A46;font:700 12px Manrope;cursor:pointer">Clear all</button>
+        </div>
+
+        <div class="lst-scroll" style="flex:1;overflow-y:auto">
+          <div style="font:800 9.5px Archivo;letter-spacing:.12em;color:#7d7d84;margin-bottom:11px">SPECIALITY</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px">
+            <sc-for list="{{ specFilters }}" as="s" hint-placeholder-count="6">
+              <button onClick="{{ s.onClick }}" style="background:{{ s.bg }};border:1.5px solid {{ s.border }};border-radius:999px;padding:9px 14px;color:{{ s.color }};cursor:pointer;font:700 12px Manrope">{{ s.label }}</button>
+            </sc-for>
+          </div>
+
+          <div style="font:800 9.5px Archivo;letter-spacing:.12em;color:#7d7d84;margin-bottom:11px">MAX PRICE / SESSION</div>
+          <div style="display:flex;gap:8px;margin-bottom:24px">
+            <sc-for list="{{ priceFilters }}" as="p" hint-placeholder-count="4">
+              <button onClick="{{ p.onClick }}" style="flex:1;background:{{ p.bg }};border:1.5px solid {{ p.border }};border-radius:12px;padding:11px 6px;color:{{ p.color }};cursor:pointer;font:700 12px Manrope">{{ p.label }}</button>
+            </sc-for>
+          </div>
+
+          <button onClick="{{ onToggleVerified }}" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:#161619;border:1.5px solid {{ verifiedBorder }};border-radius:14px;padding:15px 16px;cursor:pointer;margin-bottom:8px">
+            <span style="text-align:left">
+              <span style="display:block;font:800 13px Manrope;color:#fff">Verified coaches only</span>
+              <span style="display:block;font:500 11px Manrope;color:#8a8a92;margin-top:2px">Certified or ID-verified profiles</span>
+            </span>
+            <span style="width:44px;height:26px;border-radius:999px;background:{{ verifiedTrack }};position:relative;flex:none;transition:background .15s">
+              <span style="position:absolute;top:3px;left:{{ verifiedKnob }};width:20px;height:20px;border-radius:999px;background:#fff;transition:left .15s"></span>
+            </span>
+          </button>
+        </div>
+
+        <button onClick="{{ onApplyFilters }}" style="flex:none;width:100%;margin-top:16px;background:#F02D28;color:#fff;border:none;border-radius:15px;padding:16px;cursor:pointer;font:800 14px Manrope;letter-spacing:.02em">Show {{ resultCount }} coaches</button>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    query: "", sort: "recommended", verified: false, specs: [], maxPrice: 0,
+    sortOpen: false, filtersOpen: false,
+    city: (() => { try { return localStorage.getItem("tr_city") || "Bengaluru"; } catch(e){ return "Bengaluru"; } })(),
+    hasGoalText: (() => { try { return !!localStorage.getItem("tr_goaltext"); } catch(e){ return false; } })()
+  };
+
+  TRAINERS = [
+    { name:"Vikram Rao", rating:4.9, reviews:128, years:8, price:800, specs:["Strength","Weight loss"], tags:["Strength training","Hypertrophy"], badges:["award","verified"], review:"Structured, patient, and he actually tracks your progress every single week. Down 14 kg and lifting more than ever\u2026", img:"https://images.unsplash.com/photo-1567013127542-490d757e51fc?auto=format&fit=crop&q=70&w=440" },
+    { name:"Meera Iyer", rating:4.8, reviews:96, years:6, price:700, specs:["Weight loss","Yoga"], tags:["Weight loss","Mobility"], badges:["verified","loved"], review:"Lost 9 kg without ever feeling starved. She builds the plan around your life, not the other way around\u2026", img:"https://images.unsplash.com/photo-1550345332-09e3ac987658?auto=format&fit=crop&q=70&w=440" },
+    { name:"Arjun Nair", rating:4.7, reviews:64, years:5, price:900, specs:["Boxing"], tags:["Boxing","Conditioning"], badges:["loved"], review:"Every session wrecks you in the best way. His pad work is next level and the cardio gains are very real\u2026", img:"https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&q=70&w=440" },
+    { name:"Sana Kapoor", rating:5.0, reviews:41, years:10, price:1000, specs:["Yoga"], tags:["Pre/post-natal","Yoga"], badges:["award","verified"], review:"Helped me rebuild strength safely after pregnancy. Gentle but effective and incredibly knowledgeable\u2026", img:"https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=70&w=440" },
+    { name:"Rohan Desai", rating:4.6, reviews:52, years:4, price:650, specs:["Sports"], tags:["Cricket","Athletics"], badges:["verified"], review:"My bowling speed jumped in two months. He knows exactly how to train for the sport, not just the gym\u2026", img:"https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=70&w=440" },
+    { name:"Neha Sharma", rating:4.9, reviews:73, years:7, price:600, specs:["Nutrition"], tags:["Meal plans","Weight loss"], badges:["award","verified"], review:"Finally a plan with real Indian food I actually enjoy. No crash diets, just steady results week on week\u2026", img:"https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&q=70&w=440" },
+    { name:"Kabir Menon", rating:4.5, reviews:38, years:3, price:750, specs:["Strength","Sports"], tags:["Functional","Conditioning"], badges:["verified"], review:"Great energy and never a boring session. Pushed me harder than I thought I could go, safely\u2026", img:"https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&q=70&w=440" }
+  ];
+
+  SPECS = ["Strength","Weight loss","Boxing","Yoga","Sports","Nutrition"];
+  PRICES = [{ label:"Any", v:0 },{ label:"\u2264\u20b9700", v:700 },{ label:"\u2264\u20b9900", v:900 },{ label:"\u2264\u20b91000", v:1000 }];
+  SORTS = [
+    { id:"recommended", label:"Recommended" },
+    { id:"rating", label:"Top rated" },
+    { id:"experience", label:"Most experienced" },
+    { id:"price", label:"Price: low to high" }
+  ];
+
+  hexA(hex,a){ const n=parseInt(hex.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
+
+  compute() {
+    const { query, sort, verified, specs, maxPrice } = this.state;
+    const q = query.trim().toLowerCase();
+    let list = this.TRAINERS.filter(t => {
+      if (q && !(t.name.toLowerCase().includes(q) || t.tags.join(" ").toLowerCase().includes(q) || t.specs.join(" ").toLowerCase().includes(q))) return false;
+      if (verified && !t.badges.includes("verified")) return false;
+      if (specs.length && !specs.some(s => t.specs.includes(s))) return false;
+      if (maxPrice && t.price > maxPrice) return false;
+      return true;
+    });
+    if (sort === "rating") list = [...list].sort((a,b)=>b.rating-a.rating);
+    else if (sort === "experience") list = [...list].sort((a,b)=>b.years-a.years);
+    else if (sort === "price") list = [...list].sort((a,b)=>a.price-b.price);
+    return list;
+  }
+
+  renderVals() {
+    const st = this.state;
+    const set = (p) => this.setState(p);
+    const list = this.compute();
+
+    const results = list.map(t => {
+      const b0 = t.badges[0];
+      return {
+        name:t.name, rating:t.rating.toFixed(1), reviews:t.reviews, years:t.years,
+        price:"\u20b9"+t.price, tags:t.tags, img:t.img, review:t.review,
+        isAward:b0==="award", isLoved:b0==="loved", isVerified:b0==="verified",
+        moreBadges:t.badges.length-1
+      };
+    });
+
+    const filterCount = (st.verified?1:0) + st.specs.length + (st.maxPrice?1:0);
+
+    const quickChips = [
+      { key:"verified", label:"Verified", active:st.verified, onClick:()=>set({verified:!st.verified}) },
+      ...this.SPECS.slice(0,4).map(s => ({
+        key:s, label:s, active:st.specs.includes(s),
+        onClick:()=>set({ specs: st.specs.includes(s)? st.specs.filter(x=>x!==s):[...st.specs,s] })
+      }))
+    ].map(c => ({
+      label:c.label, onClick:c.onClick,
+      bg: c.active ? "#F02D28" : "#161619",
+      border: c.active ? "#F02D28" : "#2a2a30",
+      color: c.active ? "#fff" : "#c2c2ca"
+    }));
+
+    const sortOptions = this.SORTS.map(o => ({
+      label:o.label, active: st.sort===o.id,
+      bg: st.sort===o.id ? this.hexA("#F02D28",0.10) : "transparent",
+      onClick: ()=>set({ sort:o.id, sortOpen:false })
+    }));
+
+    const specFilters = this.SPECS.map(s => {
+      const on = st.specs.includes(s);
+      return { label:s, onClick:()=>set({ specs: on? st.specs.filter(x=>x!==s):[...st.specs,s] }),
+        bg:on?this.hexA("#F02D28",0.12):"#161619", border:on?"rgba(240,45,40,.5)":"#2a2a30", color:on?"#fff":"#c2c2ca" };
+    });
+    const priceFilters = this.PRICES.map(p => {
+      const on = st.maxPrice===p.v;
+      return { label:p.label, onClick:()=>set({ maxPrice:p.v }),
+        bg:on?this.hexA("#F02D28",0.12):"#161619", border:on?"rgba(240,45,40,.5)":"#2a2a30", color:on?"#fff":"#c2c2ca" };
+    });
+
+    return {
+      city: st.city,
+      query: st.query, onSearch:(e)=>set({ query:e.target.value }),
+      sortLabel: (this.SORTS.find(s=>s.id===st.sort)||{}).label,
+      onToggleSort:()=>set({ sortOpen:!st.sortOpen }), sortOpen:st.sortOpen, onCloseSort:()=>set({sortOpen:false}), sortOptions,
+      onOpenFilters:()=>set({ filtersOpen:true }), onCloseFilters:()=>set({ filtersOpen:false }),
+      filtersOpen:st.filtersOpen,
+      filterCount, filterBtnBg: filterCount?this.hexA("#F02D28",0.14):"#161619", filterBtnBorder: filterCount?"rgba(240,45,40,.45)":"#2a2a30",
+      quickChips, specFilters, priceFilters,
+      verified:st.verified, onToggleVerified:()=>set({ verified:!st.verified }),
+      verifiedBorder: st.verified?"rgba(240,45,40,.5)":"#26262b",
+      verifiedTrack: st.verified?"#F02D28":"#33333a",
+      verifiedKnob: st.verified?"21px":"3px",
+      onApplyFilters:()=>set({ filtersOpen:false }),
+      onClearAll:()=>set({ verified:false, specs:[], maxPrice:0 }),
+      results, resultCount:results.length, empty:results.length===0,
+      matchNote: st.hasGoalText ? " · matched to your goal" : ""
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,26 +1,180 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0b;
+  --foreground: #ffffff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brand: #f02d28;
+  --color-brand-dark: #b31b17;
+  --color-brand-light: #ff5a46;
+  --color-panel: #141417;
+  --color-panel-strong: #19191d;
+  --color-muted: #8a8a92;
+  --color-soft: #c2c2ca;
+  --font-sans: var(--font-manrope);
+  --font-display: var(--font-archivo);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-manrope), system-ui, sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+::selection {
+  background: #f02d28;
+  color: #ffffff;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.line-clamp-2,
+.line-clamp-3,
+.line-clamp-4 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+  -webkit-line-clamp: 3;
+}
+
+.line-clamp-4 {
+  -webkit-line-clamp: 4;
+}
+
+@media (min-width: 1024px) {
+  .desktop-page-shell {
+    width: min(100% - 64px, 1280px);
+    margin-inline: auto;
+  }
+
+  .desktop-home-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 32px;
+    align-items: start;
+  }
+
+  .desktop-home-hero {
+    position: relative;
+    min-height: 360px;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+    border-radius: 28px;
+    border: 1px solid rgba(240, 45, 40, 0.28);
+    background:
+      linear-gradient(120deg, rgba(240, 45, 40, 0.92), rgba(179, 27, 23, 0.78) 42%, rgba(20, 20, 23, 0.92)),
+      url("https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=78&w=1600") center / cover;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.34);
+  }
+
+  .desktop-home-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.68), rgba(0, 0, 0, 0.08));
+    pointer-events: none;
+  }
+
+  .desktop-home-hero > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .desktop-story-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    grid-auto-rows: 170px;
+    gap: 16px;
+    overflow: visible;
+    padding: 0;
+    margin-inline: 0;
+  }
+
+  .desktop-story-grid > article {
+    width: auto;
+    height: auto;
+    min-height: 0;
+  }
+
+  .desktop-story-grid > article:first-child {
+    grid-row: span 2;
+  }
+
+  .desktop-trainer-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .trainer-card-desktop {
+    min-height: 236px;
+    grid-template-columns: 158px minmax(0, 1fr);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(145deg, rgba(20, 20, 23, 0.98), rgba(13, 13, 15, 0.98));
+    padding: 18px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+  }
+
+  .trainer-card-desktop:hover {
+    transform: translateY(-2px);
+    border-color: rgba(240, 45, 40, 0.45);
+    background: #19191d;
+  }
+
+  .trainer-card-image-desktop {
+    height: 198px;
+  }
+
+  .desktop-listing-layout {
+    width: min(100% - 64px, 1280px);
+    margin-inline: auto;
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 28px;
+    padding-block: 32px;
+  }
+
+  .desktop-listing-results {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .desktop-profile-layout {
+    width: min(100% - 64px, 1280px);
+    margin-inline: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 32px;
+    padding-block: 32px;
+  }
+
+  .desktop-profile-hero {
+    min-height: 680px;
+  }
 }

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#141416;font-family:Manrope,system-ui,sans-serif;display:flex;justify-content:center;padding:40px 0}
+  a{color:#FF5A46}a:hover{color:#F02D28}
+  input,textarea,button{font-family:inherit}
+  input::placeholder,textarea::placeholder{color:#5f5f66}
+  .ob-scroll{overflow-y:auto;-ms-overflow-style:none;scrollbar-width:none}
+  .ob-scroll::-webkit-scrollbar{display:none}
+  ::selection{background:#F02D28;color:#fff}
+</style>
+</helmet>
+
+<div style="width:392px;background:#0a0a0b;border-radius:46px;padding:11px;box-shadow:0 24px 60px rgba(0,0,0,.45);border:1px solid rgba(0,0,0,.4)">
+  <div data-screen-label="{{ screenLabel }}" style="background:#0a0a0b;border-radius:36px;overflow:hidden;color:#fff;height:812px;display:flex;flex-direction:column">
+
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 26px 6px;font:600 13px Manrope;color:#f2f2f2;flex:none">
+      <span>9:41</span>
+      <span style="display:flex;gap:6px;align-items:center;opacity:.9">
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="1.5" width="3" height="10.5" rx="1" opacity=".5"/><rect x="15" y="0" width="3" height="12" rx="1" opacity=".5"/></svg>
+        <svg width="22" height="12" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="19" height="10" rx="3" stroke="currentColor" stroke-opacity=".5"/><rect x="3" y="3" width="13" height="6" rx="1.5" fill="currentColor"/><rect x="21" y="4" width="2" height="4" rx="1" fill="currentColor" fill-opacity=".5"/></svg>
+      </span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 22px 18px;flex:none">
+      <button onClick="{{ onBack }}" style="width:38px;height:38px;flex:none;border-radius:12px;border:1px solid #26262b;background:#161619;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <div style="flex:1;display:flex;gap:6px">
+        <sc-for list="{{ progress }}" as="p" hint-placeholder-count="2">
+          <span style="flex:1;height:5px;border-radius:999px;background:{{ p.bg }}"></span>
+        </sc-for>
+      </div>
+      <span style="font:800 10px Archivo;letter-spacing:.1em;color:#7d7d84;flex:none">{{ stepCount }}</span>
+    </div>
+
+    <div class="ob-scroll" style="flex:1;display:flex;flex-direction:column">
+
+      <sc-if value="{{ isCity }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:8px 22px 22px;display:flex;flex-direction:column;height:100%">
+          <div style="font:800 9.5px Archivo;letter-spacing:.14em;color:#FF5A46;margin-bottom:10px">STEP 1 · YOUR CITY</div>
+          <div style="font-family:Archivo;font-weight:900;font-size:29px;line-height:1.05;letter-spacing:-.02em;color:#fff;text-wrap:balance">Which city are you<br>training in?</div>
+          <div style="font:400 13px/1.5 Manrope;color:#8a8a92;margin-top:10px">We'll show you coaches available right where you are.</div>
+
+          <div style="position:relative;margin-top:22px">
+            <svg style="position:absolute;left:15px;top:50%;transform:translateY(-50%)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7d7d84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            <input value="{{ cityQuery }}" onInput="{{ onCityInput }}" placeholder="Search your city" style="width:100%;box-sizing:border-box;background:#161619;border:1.5px solid #26262b;border-radius:14px;padding:15px 15px 15px 44px;color:#fff;font:500 14px Manrope;outline:none">
+          </div>
+
+          <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ cityList }}" as="c" hint-placeholder-count="6">
+              <button onClick="{{ c.onSelect }}" style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:{{ c.bg }};border:1.5px solid {{ c.border }};border-radius:13px;padding:13px 15px;cursor:pointer">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{ c.pinColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span style="flex:1;font:600 14px Manrope;color:#fff">{{ c.name }}</span>
+                <span style="font:500 11px Manrope;color:#6b6b72">{{ c.trainers }}</span>
+                <sc-if value="{{ c.selected }}" hint-placeholder-val="{{ false }}">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F02D28" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 6 9 17l-5-5"/></svg>
+                </sc-if>
+              </button>
+            </sc-for>
+            <sc-if value="{{ cityEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="text-align:center;padding:26px 20px;color:#8a8a92">
+                <div style="font:700 14px Manrope;color:#fff">We're not there yet</div>
+                <div style="font:400 12.5px/1.5 Manrope;margin-top:6px">We're not in <span style="color:#FF5A46;font-weight:700">{{ cityQuery }}</span> yet. Leave your number and we'll ping you the day we launch.</div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isGoal }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:8px 22px 22px">
+          <div style="font:800 9.5px Archivo;letter-spacing:.14em;color:#FF5A46;margin-bottom:10px">STEP 2 · WHAT YOU NEED</div>
+          <div style="font-family:Archivo;font-weight:900;font-size:29px;line-height:1.05;letter-spacing:-.02em;color:#fff;text-wrap:balance">Who are you<br>looking for?</div>
+          <div style="font:400 13px/1.5 Manrope;color:#8a8a92;margin-top:10px">Pick as many as you like — you can change this later.</div>
+
+          <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ goalTypes }}" as="g" hint-placeholder-count="4">
+              <button onClick="{{ g.onToggle }}" style="display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:{{ g.bg }};border:1.5px solid {{ g.border }};border-radius:15px;padding:15px 16px;cursor:pointer">
+                <span style="width:44px;height:44px;flex:none;border-radius:12px;background:{{ g.iconBg }};display:flex;align-items:center;justify-content:center;color:{{ g.iconColor }}">{{ g.icon }}</span>
+                <span style="flex:1;min-width:0">
+                  <span style="display:block;font-family:Archivo;font-weight:800;font-size:15px;letter-spacing:-.01em;color:#fff">{{ g.name }}</span>
+                  <span style="display:block;font:500 11.5px Manrope;color:#8a8a92;margin-top:2px">{{ g.desc }}</span>
+                </span>
+                <span style="width:24px;height:24px;flex:none;border-radius:999px;border:2px solid {{ g.checkBorder }};background:{{ g.checkBg }};display:flex;align-items:center;justify-content:center">
+                  <sc-if value="{{ g.selected }}" hint-placeholder-val="{{ false }}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  </sc-if>
+                </span>
+              </button>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:12px;margin:22px 2px 18px">
+            <span style="flex:1;height:1px;background:#26262b"></span>
+            <span style="font:800 9.5px Archivo;letter-spacing:.14em;color:#6b6b72">OR DESCRIBE YOUR GOAL</span>
+            <span style="flex:1;height:1px;background:#26262b"></span>
+          </div>
+
+          <div style="background:linear-gradient(180deg,rgba(240,45,40,.06),rgba(240,45,40,0));border:1.5px solid #26262b;border-radius:16px;padding:14px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#FF5A46" stroke="none"><path d="M9.94 2.5 12 7l2.06-4.5L18.5 4.44 14 6.5l4.5 2.06L14.06 10.6 12 15l-2.06-4.4L5.5 8.56 10 6.5 5.5 4.44 9.94 2.5Z"/><path d="M18.5 14.5 19.5 17l2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5Z"/></svg>
+              <span style="font:800 11px Archivo;letter-spacing:.06em;color:#fff">FIND WITH AI</span>
+            </div>
+            <textarea value="{{ goalText }}" onInput="{{ onGoalInput }}" placeholder="e.g. I want to lose 10 kg before my wedding in June and I've never lifted before — need someone patient." rows="3" style="width:100%;box-sizing:border-box;background:#0d0d0f;border:1px solid #26262b;border-radius:12px;padding:12px;color:#fff;font:500 13px/1.5 Manrope;outline:none;resize:none"></textarea>
+            <div style="font:500 10.5px Manrope;color:#6b6b72;margin-top:8px">We'll read this and match you with coaches who fit — not just a category.</div>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+
+    <div style="flex:none;padding:16px 22px 26px;border-top:1px solid #161619;background:#0a0a0b">
+      <button onClick="{{ onNext }}" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:{{ ctaBg }};color:{{ ctaColor }};border:none;border-radius:15px;padding:16px;cursor:{{ ctaCursor }};font:800 14px Manrope;letter-spacing:.02em">
+        {{ ctaLabel }}
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+      </button>
+      <sc-if value="{{ isGoal }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ onSkip }}" style="width:100%;background:none;border:none;color:#6b6b72;font:600 12px Manrope;padding:12px 0 0;cursor:pointer">Skip — show me everyone</button>
+      </sc-if>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { step: 0, cityQuery: "", city: "", goals: [], goalText: "" };
+
+  CITIES = [
+    { name: "Mumbai", trainers: "820 coaches" },
+    { name: "Delhi", trainers: "640 coaches" },
+    { name: "Bengaluru", trainers: "710 coaches" },
+    { name: "Pune", trainers: "390 coaches" },
+    { name: "Hyderabad", trainers: "410 coaches" },
+    { name: "Chennai", trainers: "320 coaches" },
+    { name: "Kolkata", trainers: "280 coaches" },
+    { name: "Ahmedabad", trainers: "190 coaches" },
+    { name: "Jaipur", trainers: "140 coaches" },
+    { name: "Chandigarh", trainers: "120 coaches" }
+  ];
+
+  GOALS = [
+    { id: "gym", name: "Gym Trainer", desc: "Strength, fat loss, muscle gain", icon: this.dumbbell(), tint: "#F02D28" },
+    { id: "sport", name: "Sports Coach", desc: "Cricket, football, tennis, athletics", icon: this.trophy(), tint: "#3B8CFF" },
+    { id: "yoga", name: "Yoga / Aerobics / Zumba", desc: "Flexibility, cardio, group energy", icon: this.lotus(), tint: "#A05CFF" },
+    { id: "diet", name: "Nutritionist / Dietitian", desc: "Meal plans, weight management", icon: this.apple(), tint: "#1FCB6B" }
+  ];
+
+  icon(paths){return React.createElement("svg",{width:22,height:22,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"}, ...paths.map(d=>React.createElement("path",{key:d,d})));}
+  dumbbell(){return this.icon(["m6.5 6.5 11 11","m21 21-1-1","m3 3 1 1","M18 22l4-4","M2 6l4-4","m3 10 7-7","m14 21 7-7"]);}
+  trophy(){return this.icon(["M6 9H4.5a2.5 2.5 0 0 1 0-5H6","M18 9h1.5a2.5 2.5 0 0 0 0-5H18","M4 22h16","M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22","M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22","M18 2H6v7a6 6 0 0 0 12 0V2Z"]);}
+  lotus(){return this.icon(["M12 21c-3.5 0-6.5-2-8-5 1.4-1.4 3.2-2 5-1.8C13.2 13 12 9.5 12 7c0 2.5-1.2 6 3 7.2 1.8-.2 3.6.4 5 1.8-1.5 3-4.5 5-8 5Z","M12 21v-6"]);}
+  apple(){return this.icon(["M17 8c.8 1.2 1 2.5 1 4 0 3.5-2.5 8-6 8s-6-4.5-6-8c0-3 2-5 5-5 1 0 2 .3 3 1","M12 8c0-2 1-4 3-4","M15 4c0 1-.5 2-2 2.5"]);}
+  hexA(hex, alpha){ const n=parseInt(hex.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${alpha})`; }
+
+  finish(){
+    const { city, goals, goalText } = this.state;
+    try {
+      localStorage.setItem("tr_onboarded","1");
+      if (city) localStorage.setItem("tr_city", city);
+      localStorage.setItem("tr_goals", JSON.stringify(goals));
+      if (goalText.trim()) localStorage.setItem("tr_goaltext", goalText.trim());
+    } catch(e){}
+    window.location.href = "Trainers.dc.html";
+  }
+
+  renderVals() {
+    const { step, cityQuery, city, goals, goalText } = this.state;
+    const set = (patch) => this.setState(patch);
+    const progress = [0,1].map(i => ({ bg: i <= step ? "#F02D28" : "#26262b" }));
+
+    const q = cityQuery.trim().toLowerCase();
+    const filtered = this.CITIES.filter(c => c.name.toLowerCase().includes(q));
+    const cityList = filtered.map(c => {
+      const selected = city === c.name;
+      return {
+        name: c.name, trainers: c.trainers, selected,
+        pinColor: selected ? "#F02D28" : "#7d7d84",
+        bg: selected ? this.hexA("#F02D28",0.10) : "#141417",
+        border: selected ? "rgba(240,45,40,.5)" : "#232329",
+        onSelect: () => set({ city: c.name, cityQuery: c.name })
+      };
+    });
+    const cityEmpty = q.length > 0 && filtered.length === 0;
+
+    const goalTypes = this.GOALS.map(g => {
+      const selected = goals.includes(g.id);
+      return {
+        id: g.id, name: g.name, desc: g.desc, icon: g.icon, selected,
+        iconColor: selected ? "#fff" : g.tint,
+        iconBg: selected ? g.tint : this.hexA(g.tint,0.14),
+        bg: selected ? this.hexA(g.tint,0.10) : "#141417",
+        border: selected ? this.hexA(g.tint,0.55) : "#232329",
+        checkBorder: selected ? "#F02D28" : "#3a3a42",
+        checkBg: selected ? "#F02D28" : "transparent",
+        onToggle: () => set({ goals: goals.includes(g.id) ? goals.filter(x=>x!==g.id) : [...goals, g.id] })
+      };
+    });
+
+    const canCity = !!city;
+    const canGoal = goals.length > 0 || goalText.trim().length > 0;
+    let ctaLabel = "Continue", disabled = false;
+    if (step === 0) disabled = !canCity;
+    else { disabled = !canGoal; ctaLabel = (goalText.trim() && goals.length===0) ? "Find with AI" : "Show me coaches"; }
+    const active = !disabled;
+
+    const onNext = () => {
+      if (disabled) return;
+      if (step === 0) set({ step: 1 });
+      else this.finish();
+    };
+    const onBack = () => {
+      if (step === 0) { window.location.href = "Home Page.dc.html"; return; }
+      set({ step: 0 });
+    };
+
+    return {
+      isCity: step === 0, isGoal: step === 1,
+      progress, stepCount: `${step+1} / 2`,
+      screenLabel: step === 0 ? "Onboarding · City" : "Onboarding · Goal",
+      onBack,
+      cityQuery, cityList, cityEmpty,
+      onCityInput: (e) => set({ cityQuery: e.target.value, city: "" }),
+      goalTypes, goalText,
+      onGoalInput: (e) => set({ goalText: e.target.value }),
+      onSkip: () => this.finish(),
+      ctaLabel, onNext,
+      ctaBg: active ? "#F02D28" : "#1c1c20",
+      ctaColor: active ? "#fff" : "#5f5f66",
+      ctaCursor: active ? "pointer" : "not-allowed"
+    };
+  }
+}
+</script>
+</body>
+</html>
