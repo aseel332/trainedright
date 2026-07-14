@@ -13,6 +13,7 @@ import type {
 const wide = "?auto=format&fit=crop&q=78&w=1200";
 const card = "?auto=format&fit=crop&q=74&w=640";
 const avatar = "?auto=format&fit=crop&q=72&w=128";
+const fallbackWhatsAppNumber = "919876543210";
 
 export const fallbackTrainers: Trainer[] = [
   {
@@ -32,6 +33,7 @@ export const fallbackTrainers: Trainer[] = [
     clientsCount: 120,
     replyTimeLabel: "~2 hrs",
     priceFromInr: 800,
+    whatsappNumber: fallbackWhatsAppNumber,
     specialties: ["Strength", "Weight loss"],
     tags: ["Strength training", "Hypertrophy", "Powerlifting"],
     badges: ["award", "verified"],
@@ -57,6 +59,7 @@ export const fallbackTrainers: Trainer[] = [
     clientsCount: 88,
     replyTimeLabel: "~3 hrs",
     priceFromInr: 700,
+    whatsappNumber: fallbackWhatsAppNumber,
     specialties: ["Weight loss", "Yoga"],
     tags: ["Weight loss", "Mobility", "Nutrition"],
     badges: ["verified", "loved"],
@@ -82,6 +85,7 @@ export const fallbackTrainers: Trainer[] = [
     clientsCount: 72,
     replyTimeLabel: "~4 hrs",
     priceFromInr: 900,
+    whatsappNumber: fallbackWhatsAppNumber,
     specialties: ["Boxing"],
     tags: ["Boxing", "Kickboxing", "Conditioning"],
     badges: ["loved"],
@@ -107,6 +111,7 @@ export const fallbackTrainers: Trainer[] = [
     clientsCount: 64,
     replyTimeLabel: "~1 hr",
     priceFromInr: 1000,
+    whatsappNumber: fallbackWhatsAppNumber,
     specialties: ["Yoga"],
     tags: ["Pre/post-natal", "Yoga", "Rehab"],
     badges: ["award", "verified"],
@@ -132,6 +137,7 @@ export const fallbackTrainers: Trainer[] = [
     clientsCount: 58,
     replyTimeLabel: "~5 hrs",
     priceFromInr: 650,
+    whatsappNumber: fallbackWhatsAppNumber,
     specialties: ["Sports"],
     tags: ["Cricket", "Athletics", "Speed work"],
     badges: ["verified"],
@@ -157,6 +163,7 @@ export const fallbackTrainers: Trainer[] = [
     clientsCount: 112,
     replyTimeLabel: "~2 hrs",
     priceFromInr: 600,
+    whatsappNumber: fallbackWhatsAppNumber,
     specialties: ["Nutrition"],
     tags: ["Meal plans", "Weight loss", "Lifestyle"],
     badges: ["award", "verified"],
@@ -182,6 +189,7 @@ export const fallbackTrainers: Trainer[] = [
     clientsCount: 46,
     replyTimeLabel: "~6 hrs",
     priceFromInr: 750,
+    whatsappNumber: fallbackWhatsAppNumber,
     specialties: ["Strength", "Sports"],
     tags: ["Functional", "Conditioning", "Mobility"],
     badges: ["verified"],

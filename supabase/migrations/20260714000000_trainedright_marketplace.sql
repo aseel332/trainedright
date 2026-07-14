@@ -44,6 +44,7 @@ create table if not exists public.trainers (
   clients_count integer not null default 0 check (clients_count >= 0),
   reply_time_label text not null default '~24 hrs',
   price_from_inr integer not null default 0 check (price_from_inr >= 0),
+  whatsapp_number text not null default '919876543210',
   specialties text[] not null default '{}',
   tags text[] not null default '{}',
   badges public.trainer_badge[] not null default '{}',

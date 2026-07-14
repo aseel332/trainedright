@@ -17,6 +17,7 @@ export type Trainer = {
   clientsCount: number;
   replyTimeLabel: string;
   priceFromInr: number;
+  whatsappNumber: string;
   specialties: string[];
   tags: string[];
   badges: TrainerBadge[];

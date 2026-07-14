@@ -46,6 +46,7 @@ type TrainerRow = {
   clients_count: number;
   reply_time_label: string;
   price_from_inr: number;
+  whatsapp_number?: string | null;
   specialties: string[] | null;
   tags: string[] | null;
   badges: string[] | null;
@@ -164,6 +165,7 @@ function mapTrainer(row: TrainerRow): Trainer {
     clientsCount: row.clients_count,
     replyTimeLabel: row.reply_time_label,
     priceFromInr: row.price_from_inr,
+    whatsappNumber: row.whatsapp_number ?? "919876543210",
     specialties: stringArray(row.specialties),
     tags: stringArray(row.tags),
     badges: badgeArray(row.badges),

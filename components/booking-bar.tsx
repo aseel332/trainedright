@@ -4,14 +4,33 @@ import { useState } from "react";
 import { Check, MessageCircle } from "lucide-react";
 import { formatPriceInr } from "@/lib/trainer-utils";
 
-export function BookingBar({ priceFromInr }: { priceFromInr: number }) {
+function whatsappHref(trainerName: string, whatsappNumber: string) {
+  const phone = whatsappNumber.replace(/\D/g, "");
+  const text = encodeURIComponent(
+    `Hi ${trainerName}, I found your profile on TrainedRight and want to ask about training.`,
+  );
+
+  return `https://wa.me/${phone}?text=${text}`;
+}
+
+export function BookingBar({
+  priceFromInr,
+  trainerName,
+  whatsappNumber,
+}: {
+  priceFromInr: number;
+  trainerName: string;
+  whatsappNumber: string;
+}) {
   const [requested, setRequested] = useState(false);
+  const contactHref = whatsappHref(trainerName, whatsappNumber);
 
   return (
     <>
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden">
         <BookingContent
           priceFromInr={priceFromInr}
+          contactHref={contactHref}
           requested={requested}
           onRequest={() => setRequested(true)}
         />
@@ -32,6 +51,7 @@ export function BookingBar({ priceFromInr }: { priceFromInr: number }) {
           <div className="mt-5">
             <BookingContent
               priceFromInr={priceFromInr}
+              contactHref={contactHref}
               requested={requested}
               onRequest={() => setRequested(true)}
               compact
@@ -45,11 +65,13 @@ export function BookingBar({ priceFromInr }: { priceFromInr: number }) {
 
 function BookingContent({
   priceFromInr,
+  contactHref,
   requested,
   onRequest,
   compact = false,
 }: {
   priceFromInr: number;
+  contactHref: string;
   requested: boolean;
   onRequest: () => void;
   compact?: boolean;
@@ -71,15 +93,17 @@ function BookingContent({
           </p>
         </div>
       ) : null}
-      <button
-        type="button"
+      <a
+        href={contactHref}
+        target="_blank"
+        rel="noreferrer"
         aria-label="Message coach"
-        className={`grid place-items-center rounded-[14px] border border-white/10 bg-[#161619] text-white ${
+        className={`grid place-items-center rounded-[14px] border border-emerald-400/25 bg-emerald-400/10 text-emerald-300 transition hover:bg-emerald-400 hover:text-black ${
           compact ? "h-12 w-full" : "h-12 w-12 flex-none"
         }`}
       >
         <MessageCircle aria-hidden="true" size={21} />
-      </button>
+      </a>
       <button
         type="button"
         onClick={onRequest}

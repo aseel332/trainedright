@@ -152,7 +152,11 @@ export default async function TrainerDetailPage({
           </div>
         </article>
 
-        <BookingBar priceFromInr={trainer.priceFromInr} />
+        <BookingBar
+          priceFromInr={trainer.priceFromInr}
+          trainerName={trainer.name}
+          whatsappNumber={trainer.whatsappNumber}
+        />
       </div>
     </main>
   );

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Menu, Search } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
+import { HeaderActions } from "@/components/header-actions";
 
 export function SiteHeader() {
   return (
@@ -20,23 +20,14 @@ export function SiteHeader() {
           >
             Verified
           </Link>
+          <Link
+            href="/trainer/dashboard"
+            className="rounded-full px-4 py-2 text-sm font-bold text-soft transition hover:text-white"
+          >
+            For trainers
+          </Link>
         </nav>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/trainers"
-            aria-label="Search coaches"
-            className="grid h-11 w-11 place-items-center rounded-[14px] border border-white/10 bg-panel text-white transition hover:border-brand/50 hover:text-brand-light"
-          >
-            <Search aria-hidden="true" size={20} />
-          </Link>
-          <Link
-            href="/trainers"
-            aria-label="Open navigation"
-            className="grid h-11 w-11 place-items-center rounded-[14px] border border-white/10 bg-panel text-white transition hover:border-brand/50 hover:text-brand-light md:hidden"
-          >
-            <Menu aria-hidden="true" size={20} />
-          </Link>
-        </div>
+        <HeaderActions />
       </div>
     </header>
   );
