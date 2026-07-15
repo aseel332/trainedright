@@ -31,6 +31,7 @@ type TrainerQuery = {
 
 type TrainerRow = {
   id: string;
+  user_id?: string | null;
   slug: string;
   name: string;
   first_name: string;
@@ -150,6 +151,7 @@ function badgeArray(value: unknown): TrainerBadge[] {
 function mapTrainer(row: TrainerRow): Trainer {
   return {
     id: row.id,
+    userId: row.user_id ?? null,
     slug: row.slug,
     name: row.name,
     firstName: row.first_name,
@@ -403,6 +405,12 @@ function withProfileFallback(
   trainer: Trainer,
   partial: Omit<TrainerProfile, keyof Trainer>,
 ): TrainerProfile {
+  // Self-serve trainers show only what they actually collected. Never dress a
+  // real person's profile up with seed reviews, credentials, or gyms.
+  if (trainer.userId) {
+    return { ...trainer, ...partial };
+  }
+
   const knownSeedProfile =
     buildFallbackProfile(trainer.slug) ?? buildFallbackProfileFromTrainer(trainer);
 
@@ -451,7 +459,18 @@ export async function getTrainerProfile(slug: string) {
   const children = await fetchProfileChildren(trainer.id);
 
   if (!children) {
-    return buildFallbackProfile(trainer.slug) ?? null;
+    return trainer.userId
+      ? {
+          ...trainer,
+          media: [],
+          pricing: [],
+          transformations: [],
+          stories: [],
+          reviews: [],
+          locations: [],
+          credentials: [],
+        }
+      : (buildFallbackProfile(trainer.slug) ?? null);
   }
 
   return withProfileFallback(trainer, children);

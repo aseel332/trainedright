@@ -2,6 +2,8 @@ export type TrainerBadge = "award" | "verified" | "loved";
 
 export type Trainer = {
   id: string;
+  /** Set for self-serve trainers published from a trainer account; null for seed demo data. */
+  userId: string | null;
   slug: string;
   name: string;
   firstName: string;

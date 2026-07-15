@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createAuthServerClient } from "@/lib/supabase-auth-server";
+import { syncPublishedTrainer } from "@/lib/trainer-publish";
+import { deleteOrphanedUploads } from "@/lib/trainer-storage";
 import {
   parseProfileDraft,
   profileIsSubmittable,
@@ -54,6 +56,16 @@ export async function saveTrainerProfile(
   }
 
   const profile = parseProfileDraft(rawProfile);
+
+  // Read what the profile pointed at before this save, so images the trainer
+  // replaced or removed can be cleaned out of storage afterwards.
+  const { data: existing } = await ctx.supabase
+    .from("trainer_accounts")
+    .select("profile")
+    .eq("user_id", ctx.user.id)
+    .maybeSingle();
+  const previousProfile = parseProfileDraft(existing?.profile);
+
   const update: Record<string, unknown> = {
     user_id: ctx.user.id,
     profile,
@@ -78,7 +90,25 @@ export async function saveTrainerProfile(
     return { ok: false, error: error.message };
   }
 
+  // An approved trainer's edits go live straight away — no admin step.
+  const published = await syncPublishedTrainer(ctx.user.id);
+
+  // Only now that both the saved profile and any live public row point at the
+  // new images is it safe to drop the old ones.
+  await deleteOrphanedUploads(
+    ctx.supabase,
+    previousProfile,
+    profile,
+    ctx.user.id,
+  );
+
   revalidatePath("/trainer/dashboard");
+  revalidatePath("/trainers");
+  revalidatePath("/");
+  if (published?.slug) {
+    revalidatePath(`/trainers/${published.slug}`);
+  }
+
   return { ok: true };
 }
 
@@ -174,6 +204,8 @@ export async function addTrainerReview(input: {
     return { ok: false, error: error.message };
   }
 
+  await syncPublishedTrainer(ctx.user.id);
+
   revalidatePath("/trainer/dashboard");
   return { ok: true };
 }
@@ -193,6 +225,8 @@ export async function deleteReviewRequest(id: string): Promise<ActionResult> {
   if (error) {
     return { ok: false, error: error.message };
   }
+
+  await syncPublishedTrainer(ctx.user.id);
 
   revalidatePath("/trainer/dashboard");
   return { ok: true };
@@ -269,6 +303,8 @@ export async function deleteTransformationRequest(
     return { ok: false, error: error.message };
   }
 
+  await syncPublishedTrainer(ctx.user.id);
+
   revalidatePath("/trainer/dashboard");
   return { ok: true };
 }
@@ -292,7 +328,7 @@ export async function submitReviewByToken(input: {
   // RETURNING (the submitted row is no longer selectable by anon).
   const { data: existing } = await ctx.supabase
     .from("review_requests")
-    .select("id")
+    .select("id, trainer_user_id")
     .eq("id", input.token)
     .eq("status", "pending")
     .maybeSingle();
@@ -318,6 +354,8 @@ export async function submitReviewByToken(input: {
   if (error) {
     return { ok: false, error: error.message };
   }
+
+  await syncPublishedTrainer(String(existing.trainer_user_id));
 
   return { ok: true };
 }
@@ -362,7 +400,7 @@ export async function submitTransformationByToken(input: {
   // Same pattern as reviews: pre-check, then update without RETURNING.
   const { data: existing } = await ctx.supabase
     .from("transformation_requests")
-    .select("id")
+    .select("id, trainer_user_id")
     .eq("id", input.token)
     .eq("status", "pending")
     .maybeSingle();
@@ -383,6 +421,8 @@ export async function submitTransformationByToken(input: {
   if (error) {
     return { ok: false, error: error.message };
   }
+
+  await syncPublishedTrainer(String(existing.trainer_user_id));
 
   return { ok: true };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   Link2,
   Loader2,
+  Menu,
   Newspaper,
   Plus,
   Send,
@@ -119,6 +120,113 @@ const sections: {
   },
 ];
 
+/** The dashboard's section list. Labels always render — icons alone are unreadable. */
+function SectionNav({
+  section,
+  onSelect,
+}: {
+  section: SectionId;
+  onSelect: (id: SectionId) => void;
+}) {
+  return (
+    <nav className="grid gap-2">
+      {sections.map((item) => {
+        const Icon = item.icon;
+        const active = section === item.id;
+
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onSelect(item.id)}
+            aria-current={active ? "page" : undefined}
+            className={`flex items-center gap-3 rounded-[15px] border p-3 text-left transition ${
+              active
+                ? "border-brand/50 bg-brand/10"
+                : "border-white/10 bg-panel hover:border-white/20"
+            }`}
+          >
+            <span
+              className={`grid h-9 w-9 flex-none place-items-center rounded-[11px] ${
+                active ? "bg-brand text-white" : "bg-white/[0.06] text-soft"
+              }`}
+            >
+              <Icon aria-hidden="true" size={16} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13px] font-extrabold text-white">
+                {item.label}
+              </span>
+              <span className="mt-0.5 block truncate text-[11px] font-medium text-muted">
+                {item.detail}
+              </span>
+            </span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+function SectionDrawer({
+  section,
+  userEmail,
+  onSelect,
+  onClose,
+}: {
+  section: SectionId;
+  userEmail: string;
+  onSelect: (id: SectionId) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 lg:hidden">
+      <button
+        type="button"
+        aria-label="Close menu"
+        onClick={onClose}
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+      />
+      <div className="absolute inset-y-0 left-0 flex w-[284px] max-w-[86vw] flex-col border-r border-white/10 bg-background">
+        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-4">
+          <span className="font-display text-[15px] font-black uppercase tracking-[-0.02em] text-white">
+            Dashboard
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close menu"
+            className="grid h-9 w-9 place-items-center rounded-[10px] border border-white/10 bg-panel text-soft transition hover:text-white"
+          >
+            <X aria-hidden="true" size={16} />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          <SectionNav section={section} onSelect={onSelect} />
+        </div>
+
+        <div className="border-t border-white/10 px-4 py-3">
+          <span className="block truncate text-[12px] font-bold text-muted">
+            {userEmail}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function shortDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
@@ -142,6 +250,7 @@ export function TrainerDashboardClient({
   initialTransformations: TransformationRequestItem[];
 }) {
   const [section, setSection] = useState<SectionId>("overview");
+  const [menuOpen, setMenuOpen] = useState(false);
   const [profile, setProfile] = useState(initialProfile);
   const [savedSnapshot, setSavedSnapshot] = useState(() =>
     JSON.stringify(initialProfile),
@@ -191,13 +300,24 @@ export function TrainerDashboardClient({
   return (
     <main className="min-h-screen bg-background text-white">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-black/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <Link
-            href="/"
-            className="font-display text-[18px] font-black uppercase tracking-[-0.02em] text-white"
-          >
-            TRAINED<span className="text-brand">RIGHT</span>
-          </Link>
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-label="Open dashboard menu"
+              aria-expanded={menuOpen}
+              className="grid h-10 w-10 flex-none place-items-center rounded-[12px] border border-white/10 bg-panel text-white transition hover:border-brand/50 lg:hidden"
+            >
+              <Menu aria-hidden="true" size={18} />
+            </button>
+            <Link
+              href="/"
+              className="truncate font-display text-[18px] font-black uppercase tracking-[-0.02em] text-white"
+            >
+              TRAINED<span className="text-brand">RIGHT</span>
+            </Link>
+          </div>
           <div className="flex items-center gap-2">
             <span className="hidden max-w-[220px] truncate text-sm font-bold text-muted lg:inline">
               {userEmail}
@@ -217,43 +337,22 @@ export function TrainerDashboardClient({
         </div>
       </header>
 
+      {menuOpen ? (
+        <SectionDrawer
+          section={section}
+          userEmail={userEmail}
+          onSelect={(id) => {
+            setSection(id);
+            setMenuOpen(false);
+          }}
+          onClose={() => setMenuOpen(false)}
+        />
+      ) : null}
+
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[264px_minmax(0,1fr)] lg:px-8">
-        {/* Sidebar */}
-        <aside className="lg:sticky lg:top-[84px] lg:self-start">
-          <nav className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-1">
-            {sections.map((item) => {
-              const Icon = item.icon;
-              const active = section === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setSection(item.id)}
-                  className={`flex items-center gap-3 rounded-[15px] border p-3 text-left transition ${
-                    active
-                      ? "border-brand/50 bg-brand/10"
-                      : "border-white/10 bg-panel hover:border-white/20"
-                  }`}
-                >
-                  <span
-                    className={`grid h-9 w-9 flex-none place-items-center rounded-[11px] ${
-                      active ? "bg-brand text-white" : "bg-white/[0.06] text-soft"
-                    }`}
-                  >
-                    <Icon aria-hidden="true" size={16} />
-                  </span>
-                  <span className="hidden min-w-0 flex-1 sm:block">
-                    <span className="block truncate text-[13px] font-extrabold text-white">
-                      {item.label}
-                    </span>
-                    <span className="mt-0.5 hidden truncate text-[11px] font-medium text-muted lg:block">
-                      {item.detail}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
+        {/* Sidebar: a drawer on phones, always-on rail from lg up. */}
+        <aside className="hidden lg:sticky lg:top-[84px] lg:block lg:self-start">
+          <SectionNav section={section} onSelect={setSection} />
         </aside>
 
         {/* Content */}

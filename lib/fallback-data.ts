@@ -18,6 +18,7 @@ const fallbackWhatsAppNumber = "919876543210";
 export const fallbackTrainers: Trainer[] = [
   {
     id: "00000000-0000-4000-8000-000000000001",
+    userId: null,
     slug: "vikram-rao",
     name: "Vikram Rao",
     firstName: "Vikram",
@@ -44,6 +45,7 @@ export const fallbackTrainers: Trainer[] = [
   },
   {
     id: "00000000-0000-4000-8000-000000000002",
+    userId: null,
     slug: "meera-iyer",
     name: "Meera Iyer",
     firstName: "Meera",
@@ -70,6 +72,7 @@ export const fallbackTrainers: Trainer[] = [
   },
   {
     id: "00000000-0000-4000-8000-000000000003",
+    userId: null,
     slug: "arjun-nair",
     name: "Arjun Nair",
     firstName: "Arjun",
@@ -96,6 +99,7 @@ export const fallbackTrainers: Trainer[] = [
   },
   {
     id: "00000000-0000-4000-8000-000000000004",
+    userId: null,
     slug: "sana-kapoor",
     name: "Sana Kapoor",
     firstName: "Sana",
@@ -122,6 +126,7 @@ export const fallbackTrainers: Trainer[] = [
   },
   {
     id: "00000000-0000-4000-8000-000000000005",
+    userId: null,
     slug: "rohan-desai",
     name: "Rohan Desai",
     firstName: "Rohan",
@@ -148,6 +153,7 @@ export const fallbackTrainers: Trainer[] = [
   },
   {
     id: "00000000-0000-4000-8000-000000000006",
+    userId: null,
     slug: "neha-sharma",
     name: "Neha Sharma",
     firstName: "Neha",
@@ -174,6 +180,7 @@ export const fallbackTrainers: Trainer[] = [
   },
   {
     id: "00000000-0000-4000-8000-000000000007",
+    userId: null,
     slug: "kabir-menon",
     name: "Kabir Menon",
     firstName: "Kabir",

@@ -84,72 +84,97 @@ export default async function TrainerDetailPage({
             </div>
           </section>
 
-          <ProfileSection title="Photos & videos">
-            <MediaGallery media={trainer.media} />
-          </ProfileSection>
-
-          <ProfileSection title="Client transformations">
-            <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 scrollbar-none md:grid md:grid-cols-2 md:overflow-visible">
-              {trainer.transformations.map((item) => (
-                <TransformationCard
-                  key={item.id}
-                  item={item}
-                  trainerSlug={trainer.slug}
-                />
-              ))}
-            </div>
-          </ProfileSection>
-
-          <ProfileSection title={`${trainer.firstName}'s stories`}>
-            <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 scrollbar-none md:mx-0 md:px-0">
-              {trainer.stories.map((story) => (
-                <StoryCard key={story.id} story={story} size="profile" />
-              ))}
-            </div>
-          </ProfileSection>
-
-          <ProfileSection
-            title="Pricing"
-            note={`Set by ${trainer.firstName}. No platform fee.`}
-          >
-            <div className="grid gap-3 md:grid-cols-3">
-              {trainer.pricing.map((item) => (
-                <PricingCard key={item.id} item={item} />
-              ))}
-            </div>
-          </ProfileSection>
-
-          <ProfileSection
-            title="Reviews"
-            note={`${trainer.rating.toFixed(1)} · ${trainer.reviewCount} reviews`}
-          >
-            <ReviewsSection
-              rating={trainer.rating}
-              reviewCount={trainer.reviewCount}
-              reviews={trainer.reviews}
-            />
-          </ProfileSection>
-
-          <div className="mt-8 grid gap-8 lg:grid-cols-2">
-            <ProfileSection title="Trains at" compact>
-              <div className="space-y-2">
-                {trainer.locations.map((location) => (
-                  <LocationRow key={location.id} location={location} />
-                ))}
-              </div>
+          {trainer.media.length > 0 ? (
+            <ProfileSection title="Photos & videos">
+              <MediaGallery media={trainer.media} />
             </ProfileSection>
+          ) : null}
 
-            <ProfileSection title="Credentials" compact>
-              <div className="space-y-2">
-                {trainer.credentials.map((credential) => (
-                  <CredentialRow
-                    key={credential.id}
-                    credential={credential}
+          {trainer.transformations.length > 0 ? (
+            <ProfileSection title="Client transformations">
+              <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 scrollbar-none md:grid md:grid-cols-2 md:overflow-visible">
+                {trainer.transformations.map((item) => (
+                  <TransformationCard
+                    key={item.id}
+                    item={item}
+                    trainerSlug={trainer.slug}
                   />
                 ))}
               </div>
             </ProfileSection>
-          </div>
+          ) : null}
+
+          {trainer.stories.length > 0 ? (
+            <ProfileSection title={`${trainer.firstName}'s stories`}>
+              <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 scrollbar-none md:mx-0 md:px-0">
+                {trainer.stories.map((story) => (
+                  <StoryCard key={story.id} story={story} size="profile" />
+                ))}
+              </div>
+            </ProfileSection>
+          ) : null}
+
+          {trainer.pricing.length > 0 ? (
+            <ProfileSection
+              title="Pricing"
+              note={`Set by ${trainer.firstName}. No platform fee.`}
+            >
+              <div className="grid gap-3 md:grid-cols-3">
+                {trainer.pricing.map((item) => (
+                  <PricingCard key={item.id} item={item} />
+                ))}
+              </div>
+            </ProfileSection>
+          ) : null}
+
+          <ProfileSection
+            title="Reviews"
+            note={
+              trainer.reviewCount > 0
+                ? `${trainer.rating.toFixed(1)} · ${trainer.reviewCount} reviews`
+                : undefined
+            }
+          >
+            {trainer.reviews.length > 0 ? (
+              <ReviewsSection
+                rating={trainer.rating}
+                reviewCount={trainer.reviewCount}
+                reviews={trainer.reviews}
+              />
+            ) : (
+              <EmptyNote>
+                No reviews yet. {trainer.firstName} is newly listed on
+                TrainedRight.
+              </EmptyNote>
+            )}
+          </ProfileSection>
+
+          {trainer.locations.length > 0 || trainer.credentials.length > 0 ? (
+            <div className="mt-8 grid gap-8 lg:grid-cols-2">
+              {trainer.locations.length > 0 ? (
+                <ProfileSection title="Trains at" compact>
+                  <div className="space-y-2">
+                    {trainer.locations.map((location) => (
+                      <LocationRow key={location.id} location={location} />
+                    ))}
+                  </div>
+                </ProfileSection>
+              ) : null}
+
+              {trainer.credentials.length > 0 ? (
+                <ProfileSection title="Credentials" compact>
+                  <div className="space-y-2">
+                    {trainer.credentials.map((credential) => (
+                      <CredentialRow
+                        key={credential.id}
+                        credential={credential}
+                      />
+                    ))}
+                  </div>
+                </ProfileSection>
+              ) : null}
+            </div>
+          ) : null}
         </article>
 
         <BookingBar
@@ -221,24 +246,32 @@ function ProfileHero({ trainer }: { trainer: TrainerProfile }) {
             {trainer.name}
           </h1>
           <div className="mt-4 flex flex-wrap items-center gap-3 text-sm font-semibold text-soft md:text-base">
-            <span className="inline-flex items-center gap-1.5">
-              <Star
-                aria-hidden="true"
-                size={16}
-                className="fill-brand text-brand"
-              />
-              <span className="font-extrabold text-white">
-                {trainer.rating.toFixed(1)}
+            {trainer.reviewCount > 0 ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Star
+                  aria-hidden="true"
+                  size={16}
+                  className="fill-brand text-brand"
+                />
+                <span className="font-extrabold text-white">
+                  {trainer.rating.toFixed(1)}
+                </span>
+                ({trainer.reviewCount})
               </span>
-              ({trainer.reviewCount})
-            </span>
+            ) : (
+              <span className="font-extrabold text-white">New coach</span>
+            )}
             <span className="h-1 w-1 rounded-full bg-white/35" />
             <span className="inline-flex items-center gap-1.5">
               <MapPin aria-hidden="true" size={16} className="text-muted" />
               {trainer.city}
             </span>
-            <span className="h-1 w-1 rounded-full bg-white/35" />
-            <span>{formatPriceInr(trainer.priceFromInr)}/session</span>
+            {trainer.priceFromInr > 0 ? (
+              <>
+                <span className="h-1 w-1 rounded-full bg-white/35" />
+                <span>{formatPriceInr(trainer.priceFromInr)}/session</span>
+              </>
+            ) : null}
           </div>
         </div>
       </div>
@@ -247,12 +280,20 @@ function ProfileHero({ trainer }: { trainer: TrainerProfile }) {
 }
 
 function StatsGrid({ trainer }: { trainer: TrainerProfile }) {
+  // A newly published trainer has no clients or ratings recorded yet, so show
+  // only the stats that carry real information.
   const stats = [
-    { value: `${trainer.clientsCount}+`, label: "Clients" },
-    { value: `${trainer.yearsExperience} yrs`, label: "Exp" },
+    trainer.clientsCount > 0
+      ? { value: `${trainer.clientsCount}+`, label: "Clients" }
+      : null,
+    trainer.yearsExperience > 0
+      ? { value: `${trainer.yearsExperience} yrs`, label: "Exp" }
+      : null,
     { value: trainer.replyTimeLabel, label: "Replies" },
-    { value: trainer.rating.toFixed(1), label: "Rating" },
-  ];
+    trainer.reviewCount > 0
+      ? { value: trainer.rating.toFixed(1), label: "Rating" }
+      : { value: "New", label: "Rating" },
+  ].filter((stat): stat is { value: string; label: string } => stat !== null);
 
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -298,6 +339,14 @@ function ProfileSection({
       </div>
       {children}
     </section>
+  );
+}
+
+function EmptyNote({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded-[15px] border border-dashed border-white/15 bg-panel/50 px-4 py-8 text-center text-[13px] font-semibold text-muted">
+      {children}
+    </p>
   );
 }
 

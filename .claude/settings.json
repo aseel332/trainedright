@@ -15,7 +15,8 @@
       "Bash(pkill -9 -f \"next\")",
       "Bash(npx playwright *)",
       "Bash(ls ~/.cache/ms-playwright/ 2>/dev/null || echo \"no browsers cached\")",
-      "Read(//root/.cache/ms-playwright/**)"
+      "Read(//root/.cache/ms-playwright/**)",
+      "Bash(node imgmap.cjs)"
     ]
   }
 }
