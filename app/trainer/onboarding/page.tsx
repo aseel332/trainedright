@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { TrainerOnboardingClient } from "@/components/trainer-onboarding-client";
-import { createAuthServerClient } from "@/lib/supabase-auth-server";
+import { createAuthServerClient } from "@/lib/server/supabase-server";
+import { getOrCreateTrainerAccount } from "@/lib/server/trainer-account";
 import { parseProfileDraft } from "@/lib/trainer-profile";
 
 export const metadata: Metadata = {
@@ -19,11 +20,7 @@ export default async function TrainerOnboardingPage() {
     redirect("/trainer/auth?mode=signin&next=/trainer/onboarding");
   }
 
-  const { data: account } = await supabase
-    .from("trainer_accounts")
-    .select("profile, onboarding_complete, display_name")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const account = await getOrCreateTrainerAccount(supabase, user);
 
   if (account?.onboarding_complete) {
     redirect("/trainer/dashboard");

@@ -1,6 +1,6 @@
 "use client";
 
-import { createAuthBrowserClient } from "@/lib/supabase-auth-client";
+import { createAuthBrowserClient } from "@/lib/client/supabase-browser";
 
 export type UploadResult = {
   url: string;

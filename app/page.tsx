@@ -14,7 +14,7 @@ import { HomeHeroSearch } from "@/components/home-hero-search";
 import { SiteHeader } from "@/components/site-header";
 import { StoryCard } from "@/components/story-card";
 import { TrainerCard } from "@/components/trainer-card";
-import { getFeaturedStories, getTrainers } from "@/lib/data";
+import { getFeaturedStories, getTrainers } from "@/lib/server/data";
 import { searchCategories } from "@/lib/search-categories";
 
 const heroImage =
@@ -85,7 +85,7 @@ export default async function Home() {
           <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3 text-[13px] font-bold text-soft">
             <span className="inline-flex items-center gap-2">
               <Star aria-hidden="true" size={15} className="fill-brand text-brand" />
-              4.8 average coach rating
+              Verified client reviews
             </span>
             <span className="inline-flex items-center gap-2">
               <MessageCircle aria-hidden="true" size={15} className="text-emerald-300" />
@@ -184,56 +184,60 @@ export default async function Home() {
       </section>
 
       {/* Featured trainers */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-        <div className="mb-6 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-brand-light">
-              Top rated near you
-            </p>
-            <h2 className="mt-2 font-display text-[30px] font-black leading-none md:text-[40px]">
-              Coaches clients keep recommending.
-            </h2>
+      {trainers.length > 0 ? (
+        <section className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+          <div className="mb-6 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-brand-light">
+                Top rated near you
+              </p>
+              <h2 className="mt-2 font-display text-[30px] font-black leading-none md:text-[40px]">
+                Coaches clients keep recommending.
+              </h2>
+            </div>
+            <Link
+              href="/trainers"
+              className="hidden flex-none items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-4 py-2.5 text-sm font-extrabold text-brand-light transition hover:bg-brand/15 md:inline-flex"
+            >
+              See all coaches
+              <ArrowRight aria-hidden="true" size={16} />
+            </Link>
+          </div>
+          <div className="grid gap-0 md:grid-cols-2 md:gap-4 desktop-trainer-grid">
+            {trainers.map((trainer) => (
+              <TrainerCard key={trainer.id} trainer={trainer} showPrice />
+            ))}
           </div>
           <Link
             href="/trainers"
-            className="hidden flex-none items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-4 py-2.5 text-sm font-extrabold text-brand-light transition hover:bg-brand/15 md:inline-flex"
+            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-[14px] border border-brand/30 bg-brand/10 px-4 py-3 text-sm font-extrabold text-brand-light md:hidden"
           >
             See all coaches
             <ArrowRight aria-hidden="true" size={16} />
           </Link>
-        </div>
-        <div className="grid gap-0 md:grid-cols-2 md:gap-4 desktop-trainer-grid">
-          {trainers.map((trainer) => (
-            <TrainerCard key={trainer.id} trainer={trainer} showPrice />
-          ))}
-        </div>
-        <Link
-          href="/trainers"
-          className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-[14px] border border-brand/30 bg-brand/10 px-4 py-3 text-sm font-extrabold text-brand-light md:hidden"
-        >
-          See all coaches
-          <ArrowRight aria-hidden="true" size={16} />
-        </Link>
-      </section>
+        </section>
+      ) : null}
 
       {/* Stories */}
-      <section className="border-t border-white/10">
-        <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-          <div className="mb-6">
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-brand-light">
-              Real transformations
-            </p>
-            <h2 className="mt-2 font-display text-[30px] font-black leading-none md:text-[40px]">
-              Proof beats promises.
-            </h2>
+      {stories.length > 0 ? (
+        <section className="border-t border-white/10">
+          <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+            <div className="mb-6">
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-brand-light">
+                Real transformations
+              </p>
+              <h2 className="mt-2 font-display text-[30px] font-black leading-none md:text-[40px]">
+                Proof beats promises.
+              </h2>
+            </div>
+            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-none md:mx-0 md:grid md:grid-cols-2 md:px-0 desktop-story-grid">
+              {stories.slice(0, 3).map((story) => (
+                <StoryCard key={story.id} story={story} />
+              ))}
+            </div>
           </div>
-          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-none md:mx-0 md:grid md:grid-cols-2 md:px-0 desktop-story-grid">
-            {stories.slice(0, 3).map((story) => (
-              <StoryCard key={story.id} story={story} />
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       {/* Trainer CTA */}
       <section className="border-t border-white/10">

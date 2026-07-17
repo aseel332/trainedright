@@ -17,27 +17,22 @@ import {
   Wallet,
 } from "lucide-react";
 
-const heroVideo =
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
 const heroPoster =
   "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=1800";
 
-const lifeVideos = [
+const lifeShots = [
   {
-    src: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-    poster:
+    image:
       "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=78&w=900",
     label: "Fill your morning slots",
   },
   {
-    src: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
-    poster:
+    image:
       "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&q=78&w=900",
     label: "Coach who you want to coach",
   },
   {
-    src: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
-    poster:
+    image:
       "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?auto=format&fit=crop&q=78&w=900",
     label: "Own your reputation",
   },
@@ -176,14 +171,13 @@ export function TrainerLandingClient() {
 
       {/* Video hero */}
       <section className="relative flex min-h-[92svh] items-end overflow-hidden">
-        <video
-          className="absolute inset-0 h-full w-full object-cover opacity-50"
-          src={heroVideo}
-          poster={heroPoster}
-          autoPlay
-          muted
-          loop
-          playsInline
+        <Image
+          src={heroPoster}
+          alt=""
+          fill
+          priority
+          className="object-cover opacity-50"
+          sizes="100vw"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/30 to-background" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_15%,rgba(240,45,40,0.2),transparent_42%)]" />
@@ -325,23 +319,21 @@ export function TrainerLandingClient() {
             </div>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {lifeVideos.map((video) => (
+            {lifeShots.map((shot) => (
               <figure
-                key={video.src}
+                key={shot.image}
                 className="reveal group relative h-[340px] overflow-hidden rounded-[22px] border border-white/10 bg-black md:h-[420px]"
               >
-                <video
-                  className="absolute inset-0 h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-[1.03] group-hover:opacity-90"
-                  src={video.src}
-                  poster={video.poster}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
+                <Image
+                  src={shot.image}
+                  alt=""
+                  fill
+                  className="object-cover opacity-70 transition duration-500 group-hover:scale-[1.03] group-hover:opacity-90"
+                  sizes="(min-width: 768px) 33vw, 100vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 <figcaption className="absolute bottom-4 left-4 right-4 font-display text-[20px] font-black leading-tight text-white">
-                  {video.label}
+                  {shot.label}
                 </figcaption>
               </figure>
             ))}

@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TrainerProfileDraft } from "@/lib/trainer-profile";
 
@@ -70,6 +72,90 @@ export async function deleteOrphanedUploads(
     await supabase.storage.from(TRAINER_BUCKET).remove(paths);
   } catch {
     // Losing a cleanup is not worth failing the trainer's save over.
+  }
+}
+
+/**
+ * Uploads land in storage the moment a trainer picks a file, but the profile
+ * only records them on save. So swapping an image twice before saving, or
+ * walking away mid-edit, strands files the diff above can never see: it only
+ * knows the previously *saved* profile.
+ *
+ * This sweeps the trainer's folder for anything nothing points at any more.
+ *
+ * Two things it must not eat:
+ *  - transformation before/after photos, which live in the same folder but are
+ *    referenced from transformation_requests rather than the profile;
+ *  - uploads from the last few minutes, which may belong to an edit still open
+ *    in another section of the dashboard and not submitted yet.
+ */
+export const RECENT_UPLOAD_GRACE_MS = 15 * 60 * 1000;
+
+export type StoredFile = { name: string; created_at?: string | null };
+
+/** Which of a trainer's stored files nothing references any more. */
+export function staleUploadPaths(
+  files: StoredFile[],
+  referencedUrls: string[],
+  userId: string,
+  now = Date.now(),
+): string[] {
+  const referenced = new Set(
+    referencedUrls
+      .map(storagePathFromPublicUrl)
+      .filter((path): path is string => path !== null),
+  );
+  const cutoff = now - RECENT_UPLOAD_GRACE_MS;
+
+  return files
+    .filter((file) => {
+      if (referenced.has(`${userId}/${file.name}`)) {
+        return false;
+      }
+      // Unknown age means we cannot prove removing it is safe.
+      const created = Date.parse(file.created_at ?? "");
+      return Number.isFinite(created) && created < cutoff;
+    })
+    .map((file) => `${userId}/${file.name}`);
+}
+
+export async function sweepTrainerUploads(
+  supabase: SupabaseClient,
+  profile: TrainerProfileDraft,
+  userId: string,
+) {
+  try {
+    const { data: files } = await supabase.storage
+      .from(TRAINER_BUCKET)
+      .list(userId, { limit: 1000 });
+
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    // Before/after shots live in the same folder but are referenced from
+    // transformation_requests, not the profile.
+    const { data: transformations } = await supabase
+      .from("transformation_requests")
+      .select("before_image_url, after_image_url")
+      .eq("trainer_user_id", userId);
+
+    const referencedUrls = [
+      ...profileFileUrls(profile),
+      ...(transformations ?? []).flatMap((row) =>
+        [row.before_image_url, row.after_image_url].filter(
+          (url): url is string => typeof url === "string" && url.length > 0,
+        ),
+      ),
+    ];
+
+    const stale = staleUploadPaths(files, referencedUrls, userId);
+
+    if (stale.length > 0) {
+      await supabase.storage.from(TRAINER_BUCKET).remove(stale);
+    }
+  } catch {
+    // Cleanup is best effort; never fail a save over it.
   }
 }
 

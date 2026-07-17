@@ -16,7 +16,7 @@ import {
   Star,
   UserRound,
 } from "lucide-react";
-import { createAuthBrowserClient } from "@/lib/supabase-auth-client";
+import { createAuthBrowserClient } from "@/lib/client/supabase-browser";
 
 type AuthMode = "signin" | "signup";
 
@@ -502,11 +502,9 @@ export function TrainerAuthClient({
               </span>
             </div>
             <p className="mt-3 text-[14px] font-medium leading-6 text-white">
-              “I stopped chasing leads on Instagram. Clients now come to me
-              with my reviews already read and my prices already seen.”
-            </p>
-            <p className="mt-3 text-[12px] font-bold text-soft">
-              Vikram Rao · Strength coach, Bengaluru
+              Build a profile that sells your coaching: verified client
+              reviews, before/after proof, and your own prices — with leads
+              landing straight in your WhatsApp.
             </p>
           </div>
           <p className="mt-5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-white/50">

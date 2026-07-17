@@ -4,8 +4,8 @@ import {
   type AdminTrainerRow,
 } from "@/components/admin-dashboard-client";
 import { AdminLoginClient } from "@/components/admin-login-client";
-import { adminIsConfigured, hasAdminSession } from "@/lib/admin-auth";
-import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { adminIsConfigured, hasAdminSession } from "@/lib/server/admin-auth";
+import { createAdminSupabaseClient } from "@/lib/server/supabase-admin";
 import { parseProfileDraft } from "@/lib/trainer-profile";
 
 export const metadata: Metadata = {

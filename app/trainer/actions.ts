@@ -1,9 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createAuthServerClient } from "@/lib/supabase-auth-server";
-import { syncPublishedTrainer } from "@/lib/trainer-publish";
-import { deleteOrphanedUploads } from "@/lib/trainer-storage";
+import { createAuthServerClient } from "@/lib/server/supabase-server";
+import {
+  submitReviewForToken,
+  submitTransformationForToken,
+} from "@/lib/server/token-requests";
+import { syncPublishedTrainer } from "@/lib/server/trainer-publish";
+import {
+  deleteOrphanedUploads,
+  sweepTrainerUploads,
+} from "@/lib/server/trainer-storage";
 import {
   parseProfileDraft,
   profileIsSubmittable,
@@ -38,13 +45,6 @@ async function trainerClient() {
   return { supabase, user } as const;
 }
 
-async function anonClient() {
-  try {
-    return { supabase: await createAuthServerClient() } as const;
-  } catch {
-    return { error: NOT_CONFIGURED } as const;
-  }
-}
 
 export async function saveTrainerProfile(
   rawProfile: TrainerProfileDraft,
@@ -94,13 +94,15 @@ export async function saveTrainerProfile(
   const published = await syncPublishedTrainer(ctx.user.id);
 
   // Only now that both the saved profile and any live public row point at the
-  // new images is it safe to drop the old ones.
+  // new images is it safe to drop the old ones. The diff removes the image
+  // this save replaced; the sweep catches anything stranded by earlier edits.
   await deleteOrphanedUploads(
     ctx.supabase,
     previousProfile,
     profile,
     ctx.user.id,
   );
+  await sweepTrainerUploads(ctx.supabase, profile, ctx.user.id);
 
   revalidatePath("/trainer/dashboard");
   revalidatePath("/trainers");
@@ -314,48 +316,22 @@ export async function submitReviewByToken(input: {
   rating: number;
   reviewText: string;
 }): Promise<ActionResult> {
-  const ctx = await anonClient();
-  if ("error" in ctx) {
-    return { ok: false, error: ctx.error };
-  }
-
   const rating = Math.min(5, Math.max(1, Number(input.rating)));
   if (!rating || !input.reviewText.trim()) {
     return { ok: false, error: "Add a rating and a few words." };
   }
 
-  // Anon RLS only exposes pending rows, so check first and update without
-  // RETURNING (the submitted row is no longer selectable by anon).
-  const { data: existing } = await ctx.supabase
-    .from("review_requests")
-    .select("id, trainer_user_id")
-    .eq("id", input.token)
-    .eq("status", "pending")
-    .maybeSingle();
+  const result = await submitReviewForToken({
+    token: input.token,
+    rating,
+    reviewText: input.reviewText.trim(),
+  });
 
-  if (!existing) {
-    return {
-      ok: false,
-      error: "This link was already used or is no longer active.",
-    };
+  if (!result.ok) {
+    return { ok: false, error: result.error };
   }
 
-  const { error } = await ctx.supabase
-    .from("review_requests")
-    .update({
-      status: "submitted",
-      rating,
-      review_text: input.reviewText.trim(),
-      submitted_at: new Date().toISOString(),
-    })
-    .eq("id", input.token)
-    .eq("status", "pending");
-
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-
-  await syncPublishedTrainer(String(existing.trainer_user_id));
+  await syncPublishedTrainer(result.trainerUserId);
 
   return { ok: true };
 }
@@ -371,58 +347,22 @@ export async function submitTransformationByToken(input: {
   beforeImageUrl?: string;
   afterImageUrl?: string;
 }): Promise<ActionResult> {
-  const ctx = await anonClient();
-  if ("error" in ctx) {
-    return { ok: false, error: ctx.error };
-  }
-
   const rating = Math.min(5, Math.max(1, Number(input.rating)));
   if (!rating || !input.reviewText.trim()) {
     return { ok: false, error: "Add a rating and a few words." };
   }
 
-  const update: Record<string, unknown> = {
-    status: "submitted",
+  const result = await submitTransformationForToken({
+    ...input,
     rating,
-    review_text: input.reviewText.trim(),
-    submitted_at: new Date().toISOString(),
-  };
+    reviewText: input.reviewText.trim(),
+  });
 
-  if (input.clientName?.trim()) update.client_name = input.clientName.trim();
-  if (input.title?.trim()) update.title = input.title.trim();
-  if (input.resultLabel?.trim()) update.result_label = input.resultLabel.trim();
-  if (input.durationLabel?.trim()) {
-    update.duration_label = input.durationLabel.trim();
-  }
-  if (input.beforeImageUrl) update.before_image_url = input.beforeImageUrl;
-  if (input.afterImageUrl) update.after_image_url = input.afterImageUrl;
-
-  // Same pattern as reviews: pre-check, then update without RETURNING.
-  const { data: existing } = await ctx.supabase
-    .from("transformation_requests")
-    .select("id, trainer_user_id")
-    .eq("id", input.token)
-    .eq("status", "pending")
-    .maybeSingle();
-
-  if (!existing) {
-    return {
-      ok: false,
-      error: "This link was already used or is no longer active.",
-    };
+  if (!result.ok) {
+    return { ok: false, error: result.error };
   }
 
-  const { error } = await ctx.supabase
-    .from("transformation_requests")
-    .update(update)
-    .eq("id", input.token)
-    .eq("status", "pending");
-
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-
-  await syncPublishedTrainer(String(existing.trainer_user_id));
+  await syncPublishedTrainer(result.trainerUserId);
 
   return { ok: true };
 }

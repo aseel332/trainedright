@@ -1,10 +1,6 @@
-import {
-  buildFallbackProfile,
-  buildFallbackProfileFromTrainer,
-  fallbackStories,
-  fallbackTrainers,
-} from "@/lib/fallback-data";
-import { createClient } from "@/lib/supabase";
+import "server-only";
+
+import { createPublicServerClient } from "@/lib/server/supabase-public";
 import { connection } from "next/server";
 import { filterAndSortTrainers } from "@/lib/trainer-utils";
 import type {
@@ -99,6 +95,7 @@ type TransformationRow = {
   client_initials: string;
   avatar_color: string;
   review: string;
+  rating?: number | null;
   is_confirmed: boolean;
   sort_order: number;
 };
@@ -167,7 +164,7 @@ function mapTrainer(row: TrainerRow): Trainer {
     clientsCount: row.clients_count,
     replyTimeLabel: row.reply_time_label,
     priceFromInr: row.price_from_inr,
-    whatsappNumber: row.whatsapp_number ?? "919876543210",
+    whatsappNumber: row.whatsapp_number ?? "",
     specialties: stringArray(row.specialties),
     tags: stringArray(row.tags),
     badges: badgeArray(row.badges),
@@ -216,6 +213,8 @@ function mapPricing(row: PricingRow): PricingOption {
 }
 
 function mapTransformation(row: TransformationRow): Transformation {
+  const rating = Number(row.rating);
+
   return {
     id: row.id,
     trainerId: row.trainer_id,
@@ -227,6 +226,7 @@ function mapTransformation(row: TransformationRow): Transformation {
     clientInitials: row.client_initials,
     avatarColor: row.avatar_color,
     review: row.review,
+    rating: Number.isFinite(rating) && rating > 0 ? rating : null,
     isConfirmed: row.is_confirmed,
     sortOrder: row.sort_order,
   };
@@ -269,11 +269,11 @@ function mapCredential(row: CredentialRow): TrainerCredential {
   };
 }
 
-async function fetchTrainersFromSupabase() {
-  const supabase = createClient();
+export async function getTrainers(options: TrainerQuery = {}) {
+  const supabase = createPublicServerClient();
 
   if (!supabase) {
-    return null;
+    return [];
   }
 
   await connection();
@@ -285,22 +285,17 @@ async function fetchTrainersFromSupabase() {
     .order("sort_rank", { ascending: true });
 
   if (error || !data) {
-    return null;
+    return [];
   }
 
-  return (data as TrainerRow[]).map(mapTrainer);
-}
-
-export async function getTrainers(options: TrainerQuery = {}) {
-  const trainers = (await fetchTrainersFromSupabase()) ?? fallbackTrainers;
-  return filterAndSortTrainers(trainers, options);
+  return filterAndSortTrainers((data as TrainerRow[]).map(mapTrainer), options);
 }
 
 export async function getFeaturedStories() {
-  const supabase = createClient();
+  const supabase = createPublicServerClient();
 
   if (!supabase) {
-    return fallbackStories;
+    return [];
   }
 
   await connection();
@@ -313,18 +308,27 @@ export async function getFeaturedStories() {
     .order("sort_order", { ascending: true })
     .limit(6);
 
-  if (error || !data || data.length === 0) {
-    return fallbackStories;
+  if (error || !data) {
+    return [];
   }
 
   return (data as StoryRow[]).map(mapStory);
 }
 
 async function fetchProfileChildren(trainerId: string) {
-  const supabase = createClient();
+  const supabase = createPublicServerClient();
+  const empty = {
+    media: [] as TrainerMedia[],
+    pricing: [] as PricingOption[],
+    transformations: [] as Transformation[],
+    stories: [] as Story[],
+    reviews: [] as TrainerReview[],
+    locations: [] as TrainerLocation[],
+    credentials: [] as TrainerCredential[],
+  };
 
   if (!supabase) {
-    return null;
+    return empty;
   }
 
   const [
@@ -374,24 +378,12 @@ async function fetchProfileChildren(trainerId: string) {
       .order("sort_order", { ascending: true }),
   ]);
 
-  if (
-    media.error ||
-    pricing.error ||
-    transformations.error ||
-    stories.error ||
-    reviews.error ||
-    locations.error ||
-    credentials.error
-  ) {
-    return null;
-  }
-
   return {
     media: ((media.data ?? []) as MediaRow[]).map(mapMedia),
     pricing: ((pricing.data ?? []) as PricingRow[]).map(mapPricing),
-    transformations: (
-      (transformations.data ?? []) as TransformationRow[]
-    ).map(mapTransformation),
+    transformations: ((transformations.data ?? []) as TransformationRow[]).map(
+      mapTransformation,
+    ),
     stories: ((stories.data ?? []) as StoryRow[]).map(mapStory),
     reviews: ((reviews.data ?? []) as ReviewRow[]).map(mapReview),
     locations: ((locations.data ?? []) as LocationRow[]).map(mapLocation),
@@ -401,45 +393,13 @@ async function fetchProfileChildren(trainerId: string) {
   };
 }
 
-function withProfileFallback(
-  trainer: Trainer,
-  partial: Omit<TrainerProfile, keyof Trainer>,
-): TrainerProfile {
-  // Self-serve trainers show only what they actually collected. Never dress a
-  // real person's profile up with seed reviews, credentials, or gyms.
-  if (trainer.userId) {
-    return { ...trainer, ...partial };
-  }
-
-  const knownSeedProfile =
-    buildFallbackProfile(trainer.slug) ?? buildFallbackProfileFromTrainer(trainer);
-
-  return {
-    ...trainer,
-    media: partial.media.length > 0 ? partial.media : knownSeedProfile.media,
-    pricing:
-      partial.pricing.length > 0 ? partial.pricing : knownSeedProfile.pricing,
-    transformations:
-      partial.transformations.length > 0
-        ? partial.transformations
-        : knownSeedProfile.transformations,
-    stories: partial.stories.length > 0 ? partial.stories : knownSeedProfile.stories,
-    reviews:
-      partial.reviews.length > 0 ? partial.reviews : knownSeedProfile.reviews,
-    locations:
-      partial.locations.length > 0 ? partial.locations : knownSeedProfile.locations,
-    credentials:
-      partial.credentials.length > 0
-        ? partial.credentials
-        : knownSeedProfile.credentials,
-  };
-}
-
-export async function getTrainerProfile(slug: string) {
-  const supabase = createClient();
+export async function getTrainerProfile(
+  slug: string,
+): Promise<TrainerProfile | null> {
+  const supabase = createPublicServerClient();
 
   if (!supabase) {
-    return buildFallbackProfile(slug);
+    return null;
   }
 
   await connection();
@@ -452,26 +412,11 @@ export async function getTrainerProfile(slug: string) {
     .single();
 
   if (error || !data) {
-    return buildFallbackProfile(slug);
+    return null;
   }
 
   const trainer = mapTrainer(data as TrainerRow);
   const children = await fetchProfileChildren(trainer.id);
 
-  if (!children) {
-    return trainer.userId
-      ? {
-          ...trainer,
-          media: [],
-          pricing: [],
-          transformations: [],
-          stories: [],
-          reviews: [],
-          locations: [],
-          credentials: [],
-        }
-      : (buildFallbackProfile(trainer.slug) ?? null);
-  }
-
-  return withProfileFallback(trainer, children);
+  return { ...trainer, ...children };
 }

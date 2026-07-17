@@ -9,13 +9,13 @@ import {
   createAdminSessionToken,
   hasAdminSession,
   verifyAdminCredentials,
-} from "@/lib/admin-auth";
-import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+} from "@/lib/server/admin-auth";
+import { createAdminSupabaseClient } from "@/lib/server/supabase-admin";
 import {
   publishTrainerAccount,
   unpublishTrainerAccount,
-} from "@/lib/trainer-publish";
-import { deleteTrainerFolder } from "@/lib/trainer-storage";
+} from "@/lib/server/trainer-publish";
+import { deleteTrainerFolder } from "@/lib/server/trainer-storage";
 
 export type AdminActionResult = {
   ok: boolean;

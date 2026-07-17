@@ -11,12 +11,14 @@ import {
   ClipboardCheck,
   Copy,
   Dumbbell,
+  ExternalLink,
   Hourglass,
   ImageIcon,
   Images,
   LayoutDashboard,
   Link2,
   Loader2,
+  LogOut,
   Menu,
   Newspaper,
   Plus,
@@ -46,13 +48,14 @@ import type {
   ReviewRequestItem,
   TransformationRequestItem,
 } from "@/lib/link-requests";
+import type { TrainerAnalytics } from "@/lib/types";
 import { cityOptions, searchCategories } from "@/lib/search-categories";
 import {
   profileCompletionPercent,
   profileRequirements,
   type TrainerProfileDraft,
 } from "@/lib/trainer-profile";
-import { uploadPublicFile } from "@/lib/upload";
+import { uploadPublicFile } from "@/lib/client/upload";
 
 type SectionId =
   | "overview"
@@ -241,6 +244,7 @@ export function TrainerDashboardClient({
   initialProfile,
   initialReviews,
   initialTransformations,
+  analytics,
 }: {
   userEmail: string;
   userId: string;
@@ -248,6 +252,7 @@ export function TrainerDashboardClient({
   initialProfile: TrainerProfileDraft;
   initialReviews: ReviewRequestItem[];
   initialTransformations: TransformationRequestItem[];
+  analytics: TrainerAnalytics;
 }) {
   const [section, setSection] = useState<SectionId>("overview");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -264,6 +269,17 @@ export function TrainerDashboardClient({
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const dirty = JSON.stringify(profile) !== savedSnapshot;
+
+  // The dashboard is left through "View site" or "Sign out", never the back
+  // button — going back would otherwise land on pages from before login.
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+    const onPopState = () => {
+      window.history.pushState(null, "", window.location.href);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   function update(patch: Partial<TrainerProfileDraft>) {
     setProfile((current) => ({ ...current, ...patch }));
@@ -328,11 +344,22 @@ export function TrainerDashboardClient({
               {statusChip.label}
             </span>
             <Link
-              href="/auth/signout"
-              className="rounded-full border border-white/10 bg-panel px-4 py-2 text-sm font-bold text-white transition hover:border-brand/50"
+              href="/"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-panel px-4 py-2 text-sm font-bold text-white transition hover:border-brand/50"
             >
-              Sign out
+              <ExternalLink aria-hidden="true" size={14} />
+              <span className="hidden sm:inline">View site</span>
+              <span className="sm:hidden">Site</span>
             </Link>
+            <form action="/auth/signout" method="post">
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-panel px-4 py-2 text-sm font-bold text-white transition hover:border-brand/50"
+              >
+                <LogOut aria-hidden="true" size={14} />
+                Sign out
+              </button>
+            </form>
           </div>
         </div>
       </header>
@@ -363,6 +390,7 @@ export function TrainerDashboardClient({
               approvalStatus={approvalStatus}
               reviews={reviews}
               transformations={transformations}
+              analytics={analytics}
               onSubmitted={() => setApprovalStatus("review")}
               goTo={setSection}
             />
@@ -500,6 +528,7 @@ function OverviewSection({
   approvalStatus,
   reviews,
   transformations,
+  analytics,
   onSubmitted,
   goTo,
 }: {
@@ -507,6 +536,7 @@ function OverviewSection({
   approvalStatus: string;
   reviews: ReviewRequestItem[];
   transformations: TransformationRequestItem[];
+  analytics: TrainerAnalytics;
   onSubmitted: () => void;
   goTo: (section: SectionId) => void;
 }) {
@@ -675,102 +705,17 @@ function OverviewSection({
         </div>
       </div>
 
-      {/* Demand analytics */}
+      {/* Demand analytics (live numbers from /api/track events) */}
       <div>
         <SectionLabel
           title="Demand analytics"
           note={
             isLive
-              ? "Updated daily"
-              : "Sample preview — starts counting once your profile is live"
+              ? "Live numbers from your public profile"
+              : "Starts counting once your profile is live"
           }
         />
-        <div className="relative">
-          {!isLive ? (
-            <span className="absolute right-3 top-3 z-10 rounded-full border border-white/15 bg-black/70 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.1em] text-soft backdrop-blur">
-              Sample
-            </span>
-          ) : null}
-          <div className={isLive ? "" : "opacity-75"}>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              {[
-                ["Search impressions", "3,420", "How often you appeared in results"],
-                ["Profile views", "1,284", "Clients who opened your profile"],
-                ["WhatsApp contacts", "96", "Clients who started a chat"],
-                ["Saves", "118", "Clients who shortlisted you"],
-              ].map(([label, value, hint]) => (
-                <div
-                  key={label}
-                  className="rounded-[18px] border border-white/10 bg-panel p-4"
-                >
-                  <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-muted">
-                    {label}
-                  </p>
-                  <p className="mt-2 font-display text-[28px] font-black leading-none text-white">
-                    {value}
-                  </p>
-                  <p className="mt-2 text-[11px] font-medium leading-4 text-muted">
-                    {hint}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-              {/* Trend */}
-              <div className="rounded-[18px] border border-white/10 bg-panel p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted">
-                    Profile views · last 8 weeks
-                  </p>
-                  <BarChart3 aria-hidden="true" size={15} className="text-muted" />
-                </div>
-                <div className="mt-4 flex h-36 items-end gap-2">
-                  {[42, 54, 49, 68, 72, 88, 80, 96].map((height, index) => (
-                    <span
-                      key={index}
-                      className={`flex-1 rounded-t-[8px] ${
-                        index === 7 ? "bg-brand" : "bg-brand/35"
-                      }`}
-                      style={{ height: `${height}%` }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Funnel */}
-              <div className="rounded-[18px] border border-white/10 bg-panel p-4">
-                <p className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted">
-                  Conversion funnel
-                </p>
-                <div className="mt-4 space-y-3">
-                  {[
-                    ["Impressions", 100, "3,420"],
-                    ["Profile views", 38, "1,284"],
-                    ["Contacts", 7, "96"],
-                  ].map(([label, width, value]) => (
-                    <div key={label as string}>
-                      <div className="flex items-center justify-between text-[11px] font-bold">
-                        <span className="text-soft">{label}</span>
-                        <span className="text-white">{value}</span>
-                      </div>
-                      <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-white/8">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-brand to-brand-light"
-                          style={{ width: `${width}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-4 text-[11px] font-medium leading-5 text-muted">
-                  Coaches with 3+ verified reviews convert about twice as many
-                  views into chats.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <DemandAnalytics analytics={analytics} />
       </div>
 
       {/* Quick actions */}
@@ -809,6 +754,126 @@ function OverviewSection({
             </span>
           </span>
         </button>
+      </div>
+    </div>
+  );
+}
+
+function DemandAnalytics({ analytics }: { analytics: TrainerAnalytics }) {
+  const { totals, weeklyViews, available } = analytics;
+  const maxWeekly = Math.max(1, ...weeklyViews);
+  const contactRate =
+    totals.profileViews > 0
+      ? Math.round(
+          ((totals.whatsappClicks + totals.trialRequests) /
+            totals.profileViews) *
+            100,
+        )
+      : 0;
+
+  const tiles: [string, number, string][] = [
+    ["Profile views", totals.profileViews, "Clients who opened your profile"],
+    ["WhatsApp contacts", totals.whatsappClicks, "Clients who started a chat"],
+    ["Trial requests", totals.trialRequests, "Clients who asked for a trial"],
+    ["Saves", totals.saves, "Clients who shortlisted you"],
+  ];
+
+  return (
+    <div>
+      {!available ? (
+        <p className="mb-3 rounded-[14px] border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-[12px] font-semibold leading-5 text-amber-100">
+          Analytics tracking is not set up in the database yet. Run the latest
+          migration in supabase/migrations to start counting.
+        </p>
+      ) : null}
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {tiles.map(([label, value, hint]) => (
+          <div
+            key={label}
+            className="rounded-[18px] border border-white/10 bg-panel p-4"
+          >
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-muted">
+              {label}
+            </p>
+            <p className="mt-2 font-display text-[28px] font-black leading-none text-white">
+              {value.toLocaleString("en-IN")}
+            </p>
+            <p className="mt-2 text-[11px] font-medium leading-4 text-muted">
+              {hint}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        {/* Trend */}
+        <div className="rounded-[18px] border border-white/10 bg-panel p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted">
+              Profile views · last 8 weeks
+            </p>
+            <BarChart3 aria-hidden="true" size={15} className="text-muted" />
+          </div>
+          <div className="mt-4 flex h-36 items-end gap-2">
+            {weeklyViews.map((count, index) => (
+              <span
+                key={index}
+                title={`${count} views`}
+                className={`flex-1 rounded-t-[8px] ${
+                  index === weeklyViews.length - 1 ? "bg-brand" : "bg-brand/35"
+                }`}
+                style={{
+                  height: `${Math.max(3, Math.round((count / maxWeekly) * 100))}%`,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Funnel */}
+        <div className="rounded-[18px] border border-white/10 bg-panel p-4">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted">
+            Conversion
+          </p>
+          <div className="mt-4 space-y-3">
+            {(
+              [
+                ["Profile views", totals.profileViews],
+                ["Contacts + trials", totals.whatsappClicks + totals.trialRequests],
+              ] as [string, number][]
+            ).map(([label, value]) => (
+              <div key={label}>
+                <div className="flex items-center justify-between text-[11px] font-bold">
+                  <span className="text-soft">{label}</span>
+                  <span className="text-white">
+                    {value.toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-white/8">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-brand to-brand-light"
+                    style={{
+                      width: `${
+                        totals.profileViews > 0
+                          ? Math.max(
+                              2,
+                              Math.round((value / totals.profileViews) * 100),
+                            )
+                          : 2
+                      }%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-[11px] font-medium leading-5 text-muted">
+            {totals.profileViews > 0
+              ? `${contactRate}% of profile views turn into a contact or trial request.`
+              : "Share your profile link to start seeing demand here."}
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ export type TrainerBadge = "award" | "verified" | "loved";
 
 export type Trainer = {
   id: string;
-  /** Set for self-serve trainers published from a trainer account; null for seed demo data. */
+  /** The auth user who owns this published profile. */
   userId: string | null;
   slug: string;
   name: string;
@@ -71,6 +71,8 @@ export type Transformation = {
   clientInitials: string;
   avatarColor: string;
   review: string;
+  /** The client's star rating, when they submitted one via their link. */
+  rating: number | null;
   isConfirmed: boolean;
   sortOrder: number;
 };
@@ -117,3 +119,17 @@ export type TrainerProfile = Trainer & {
 };
 
 export type TrainerSort = "recommended" | "rating" | "experience" | "price";
+
+/** Aggregated demand analytics shown on the trainer dashboard. */
+export type TrainerAnalytics = {
+  /** false until the trainer_events migration has been applied. */
+  available: boolean;
+  totals: {
+    profileViews: number;
+    whatsappClicks: number;
+    trialRequests: number;
+    saves: number;
+  };
+  /** Profile views per week for the last 8 weeks, oldest first. */
+  weeklyViews: number[];
+};

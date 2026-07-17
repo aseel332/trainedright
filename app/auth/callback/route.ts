@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createAuthServerClient } from "@/lib/supabase-auth-server";
+import { createAuthServerClient } from "@/lib/server/supabase-server";
 
 function safeNext(value: string | null) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {

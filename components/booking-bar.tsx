@@ -1,38 +1,48 @@
 "use client";
 
-import { useState } from "react";
-import { Check, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
+import { trackTrainerEvent } from "@/lib/client/track";
 import { formatPriceInr } from "@/lib/trainer-utils";
 
-function whatsappHref(trainerName: string, whatsappNumber: string) {
+function whatsappHref(
+  trainerName: string,
+  whatsappNumber: string,
+  intent: "question" | "trial",
+) {
   const phone = whatsappNumber.replace(/\D/g, "");
   const text = encodeURIComponent(
-    `Hi ${trainerName}, I found your profile on TrainedRight and want to ask about training.`,
+    intent === "trial"
+      ? `Hi ${trainerName}, I found your profile on TrainedRight and would like to book a free trial session.`
+      : `Hi ${trainerName}, I found your profile on TrainedRight and want to ask about training.`,
   );
 
   return `https://wa.me/${phone}?text=${text}`;
 }
 
+/**
+ * The contact rail on a public trainer profile. Both actions open the
+ * trainer's WhatsApp — that is the product's contact channel — and each tap
+ * is recorded so the trainer sees real demand in their dashboard.
+ */
 export function BookingBar({
+  slug,
   priceFromInr,
   trainerName,
   whatsappNumber,
 }: {
+  slug: string;
   priceFromInr: number;
   trainerName: string;
   whatsappNumber: string;
 }) {
-  const [requested, setRequested] = useState(false);
-  const contactHref = whatsappHref(trainerName, whatsappNumber);
-
   return (
     <>
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden">
         <BookingContent
+          slug={slug}
           priceFromInr={priceFromInr}
-          contactHref={contactHref}
-          requested={requested}
-          onRequest={() => setRequested(true)}
+          trainerName={trainerName}
+          whatsappNumber={whatsappNumber}
         />
       </div>
 
@@ -50,10 +60,10 @@ export function BookingBar({
           </p>
           <div className="mt-5">
             <BookingContent
+              slug={slug}
               priceFromInr={priceFromInr}
-              contactHref={contactHref}
-              requested={requested}
-              onRequest={() => setRequested(true)}
+              trainerName={trainerName}
+              whatsappNumber={whatsappNumber}
               compact
             />
           </div>
@@ -64,16 +74,16 @@ export function BookingBar({
 }
 
 function BookingContent({
+  slug,
   priceFromInr,
-  contactHref,
-  requested,
-  onRequest,
+  trainerName,
+  whatsappNumber,
   compact = false,
 }: {
+  slug: string;
   priceFromInr: number;
-  contactHref: string;
-  requested: boolean;
-  onRequest: () => void;
+  trainerName: string;
+  whatsappNumber: string;
   compact?: boolean;
 }) {
   return (
@@ -94,34 +104,31 @@ function BookingContent({
         </div>
       ) : null}
       <a
-        href={contactHref}
+        href={whatsappHref(trainerName, whatsappNumber, "question")}
         target="_blank"
         rel="noreferrer"
-        aria-label="Message coach"
+        aria-label="Message coach on WhatsApp"
+        onClick={() => trackTrainerEvent(slug, "whatsapp_click")}
         className={`grid place-items-center rounded-[14px] border border-emerald-400/25 bg-emerald-400/10 text-emerald-300 transition hover:bg-emerald-400 hover:text-black ${
           compact ? "h-12 w-full" : "h-12 w-12 flex-none"
         }`}
       >
         <MessageCircle aria-hidden="true" size={21} />
       </a>
-      <button
-        type="button"
-        onClick={onRequest}
+      <a
+        href={whatsappHref(trainerName, whatsappNumber, "trial")}
+        target="_blank"
+        rel="noreferrer"
+        onClick={() => trackTrainerEvent(slug, "trial_request")}
         className="flex min-h-12 flex-1 flex-col items-center justify-center rounded-[14px] bg-brand px-4 py-2 text-white transition hover:bg-brand-dark"
       >
         <span className="inline-flex items-center gap-2 text-sm font-extrabold">
-          {requested ? (
-            <>
-              Trial requested <Check aria-hidden="true" size={16} />
-            </>
-          ) : (
-            "Book a trial"
-          )}
+          Book a trial
         </span>
         <span className="text-[10px] font-semibold text-white/80">
-          Free first session
+          Free first session on WhatsApp
         </span>
-      </button>
+      </a>
     </div>
   );
 }

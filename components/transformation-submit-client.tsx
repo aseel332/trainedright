@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { submitTransformationByToken } from "@/app/trainer/actions";
 import { StarPicker } from "@/components/trainer-dashboard-client";
-import { uploadPublicFile } from "@/lib/upload";
+import { uploadPublicFile } from "@/lib/client/upload";
 
 type TransformationRequest = {
   mode: "client_all" | "trainer_photos";

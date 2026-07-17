@@ -5,7 +5,9 @@ import {
   mapReviewRequestRow,
   mapTransformationRequestRow,
 } from "@/lib/link-requests";
-import { createAuthServerClient } from "@/lib/supabase-auth-server";
+import { getTrainerAnalytics } from "@/lib/server/analytics";
+import { createAuthServerClient } from "@/lib/server/supabase-server";
+import { getOrCreateTrainerAccount } from "@/lib/server/trainer-account";
 import { parseProfileDraft } from "@/lib/trainer-profile";
 
 export const metadata: Metadata = {
@@ -24,17 +26,13 @@ export default async function TrainerDashboardPage() {
     redirect("/trainer/auth?mode=signin&next=/trainer/dashboard");
   }
 
-  const { data: account } = await supabase
-    .from("trainer_accounts")
-    .select("profile, onboarding_complete, approval_status, display_name")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const account = await getOrCreateTrainerAccount(supabase, user);
 
   if (!account?.onboarding_complete) {
     redirect("/trainer/onboarding");
   }
 
-  const [reviewsResult, transformationsResult] = await Promise.all([
+  const [reviewsResult, transformationsResult, analytics] = await Promise.all([
     supabase
       .from("review_requests")
       .select("*")
@@ -45,6 +43,7 @@ export default async function TrainerDashboardPage() {
       .select("*")
       .eq("trainer_user_id", user.id)
       .order("created_at", { ascending: false }),
+    getTrainerAnalytics(user.id),
   ]);
 
   return (
@@ -57,6 +56,7 @@ export default async function TrainerDashboardPage() {
       initialTransformations={(transformationsResult.data ?? []).map(
         mapTransformationRequestRow,
       )}
+      analytics={analytics}
     />
   );
 }

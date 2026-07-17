@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { TrainerListingClient } from "@/components/trainer-listing-client";
-import { getTrainers } from "@/lib/data";
+import { getTrainers } from "@/lib/server/data";
 import { searchCategories } from "@/lib/search-categories";
 
 export const metadata: Metadata = {

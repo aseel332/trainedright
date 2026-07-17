@@ -1,6 +1,8 @@
+import "server-only";
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { categoryIdsToSpecs } from "@/lib/search-categories";
-import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { createAdminSupabaseClient } from "@/lib/server/supabase-admin";
 import { parseProfileDraft, type TrainerProfileDraft } from "@/lib/trainer-profile";
 
 /**
@@ -318,6 +320,7 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
     .filter((row) => row.before_image_url && row.after_image_url)
     .map((row, index) => {
       const clientName = String(row.client_name ?? "Client");
+      const rating = Number(row.rating);
       return {
         trainer_id: trainerId,
         result_label: String(row.result_label ?? "") || "Transformation",
@@ -328,10 +331,35 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
         client_initials: initialsOf(clientName),
         avatar_color: AVATAR_COLORS[index % AVATAR_COLORS.length],
         review: String(row.review_text ?? ""),
+        rating: Number.isFinite(rating) && rating > 0 ? rating : null,
         is_confirmed: true,
         sort_order: index + 1,
       };
     });
+
+  async function insertTransformations(db: SupabaseClient) {
+    if (transformationRows.length === 0) {
+      return null;
+    }
+
+    const attempt = await db
+      .from("trainer_transformations")
+      .insert(transformationRows);
+
+    // Until the 20260717 migration adds trainer_transformations.rating,
+    // publish without it rather than failing the whole publish.
+    if (attempt.error && /rating/i.test(attempt.error.message)) {
+      return db.from("trainer_transformations").insert(
+        transformationRows.map((row) => {
+          const { rating, ...rest } = row;
+          void rating;
+          return rest;
+        }),
+      );
+    }
+
+    return attempt;
+  }
 
   const inserts = await Promise.all([
     mediaRows.length ? supabase.from("trainer_media").insert(mediaRows) : null,
@@ -340,9 +368,7 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
       ? supabase.from("trainer_credentials").insert(credentialRows)
       : null,
     reviewRows.length ? supabase.from("trainer_reviews").insert(reviewRows) : null,
-    transformationRows.length
-      ? supabase.from("trainer_transformations").insert(transformationRows)
-      : null,
+    insertTransformations(supabase),
   ]);
 
   const failed = inserts.find((result) => result?.error);

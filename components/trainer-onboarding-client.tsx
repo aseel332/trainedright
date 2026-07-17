@@ -42,7 +42,7 @@ import {
   type ProfilePlan,
   type TrainerProfileDraft,
 } from "@/lib/trainer-profile";
-import { uploadPublicFile } from "@/lib/upload";
+import { uploadPublicFile } from "@/lib/client/upload";
 
 type StepId =
   | "welcome"

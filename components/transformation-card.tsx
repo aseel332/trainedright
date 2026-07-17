@@ -4,7 +4,6 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Clock, MoveHorizontal, Star } from "lucide-react";
-import { getTransformationReviewSummary } from "@/lib/transformation-review";
 import type { Transformation } from "@/lib/types";
 
 function reviewPreview(review: string) {
@@ -25,7 +24,6 @@ export function TransformationCard({
   trainerSlug: string;
 }) {
   const [sliderValue, setSliderValue] = useState(50);
-  const review = getTransformationReviewSummary(item);
   const detailHref = `/trainers/${encodeURIComponent(
     trainerSlug,
   )}/transformations/${encodeURIComponent(item.id)}`;
@@ -93,14 +91,16 @@ export function TransformationCard({
               </span>
             </p>
           </div>
-          <span className="inline-flex flex-none items-center gap-1 rounded-full border border-white/10 bg-black/35 px-2.5 py-1.5 text-[12px] font-extrabold text-white">
-            <Star
-              aria-hidden="true"
-              size={13}
-              className="fill-brand text-brand"
-            />
-            {review.rating.toFixed(1)}
-          </span>
+          {item.rating ? (
+            <span className="inline-flex flex-none items-center gap-1 rounded-full border border-white/10 bg-black/35 px-2.5 py-1.5 text-[12px] font-extrabold text-white">
+              <Star
+                aria-hidden="true"
+                size={13}
+                className="fill-brand text-brand"
+              />
+              {item.rating.toFixed(1)}
+            </span>
+          ) : null}
         </div>
 
         <p className="mt-3 text-[13px] leading-6 text-soft">

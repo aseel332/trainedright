@@ -5,21 +5,20 @@ import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   Award,
-  Bookmark,
   Check,
   Dumbbell,
   MapPin,
-  Share2,
   ShieldCheck,
   Star,
 } from "lucide-react";
 import { BadgeIcon } from "@/components/badge-icon";
 import { BookingBar } from "@/components/booking-bar";
+import { ProfileActions } from "@/components/profile-actions";
 import { MediaGallery } from "@/components/media-gallery";
 import { ReviewsSection } from "@/components/reviews-section";
 import { StoryCard } from "@/components/story-card";
 import { TransformationCard } from "@/components/transformation-card";
-import { getTrainerProfile } from "@/lib/data";
+import { getTrainerProfile } from "@/lib/server/data";
 import { formatPriceInr } from "@/lib/trainer-utils";
 import type {
   PricingOption,
@@ -177,11 +176,14 @@ export default async function TrainerDetailPage({
           ) : null}
         </article>
 
-        <BookingBar
-          priceFromInr={trainer.priceFromInr}
-          trainerName={trainer.name}
-          whatsappNumber={trainer.whatsappNumber}
-        />
+        {trainer.whatsappNumber ? (
+          <BookingBar
+            slug={trainer.slug}
+            priceFromInr={trainer.priceFromInr}
+            trainerName={trainer.name}
+            whatsappNumber={trainer.whatsappNumber}
+          />
+        ) : null}
       </div>
     </main>
   );
@@ -211,22 +213,7 @@ function ProfileHero({ trainer }: { trainer: TrainerProfile }) {
         >
           <ArrowLeft aria-hidden="true" size={20} />
         </Link>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            aria-label="Share trainer"
-            className="grid h-11 w-11 place-items-center rounded-[12px] border border-white/15 bg-black/45 text-white backdrop-blur"
-          >
-            <Share2 aria-hidden="true" size={19} />
-          </button>
-          <button
-            type="button"
-            aria-label="Save trainer"
-            className="grid h-11 w-11 place-items-center rounded-[12px] border border-white/15 bg-black/45 text-white backdrop-blur"
-          >
-            <Bookmark aria-hidden="true" size={19} />
-          </button>
-        </div>
+        <ProfileActions slug={trainer.slug} trainerName={trainer.name} />
       </div>
 
       <div className="relative mx-auto flex min-h-[415px] max-w-7xl items-end px-4 pb-8 sm:px-6 lg:min-h-[510px] lg:px-8 lg:pb-12">

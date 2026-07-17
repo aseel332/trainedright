@@ -1,6 +1,8 @@
+import "server-only";
+
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
-import { getSupabaseAuthConfig } from "@/lib/supabase-auth";
+import { getSupabaseAuthConfig } from "@/lib/supabase-config";
 
 export async function createAuthServerClient() {
   const cookieStore = await cookies();
