@@ -47,7 +47,7 @@ export function TrainerCard({
               {trainer.name}
             </h3>
             <p className="mt-1 text-[11px] font-semibold text-muted md:text-xs">
-              {trainer.area}, {trainer.city}
+              {trainer.state ? `${trainer.city}, ${trainer.state}` : trainer.city}
             </p>
           </div>
           <span className="inline-flex flex-none items-center gap-1 text-[12px] font-extrabold md:text-sm">

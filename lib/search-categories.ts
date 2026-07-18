@@ -49,17 +49,22 @@ export const searchCategories: SearchCategory[] = [
 ];
 
 export const cityOptions = [
-  { name: "Mumbai", note: "820 coaches" },
-  { name: "Delhi", note: "640 coaches" },
-  { name: "Bengaluru", note: "710 coaches" },
-  { name: "Pune", note: "390 coaches" },
-  { name: "Hyderabad", note: "410 coaches" },
-  { name: "Chennai", note: "320 coaches" },
-  { name: "Kolkata", note: "280 coaches" },
-  { name: "Ahmedabad", note: "190 coaches" },
-  { name: "Jaipur", note: "140 coaches" },
-  { name: "Chandigarh", note: "120 coaches" },
+  { name: "Mumbai", state: "Maharashtra", note: "820 coaches" },
+  { name: "Delhi", state: "Delhi", note: "640 coaches" },
+  { name: "Bengaluru", state: "Karnataka", note: "710 coaches" },
+  { name: "Pune", state: "Maharashtra", note: "390 coaches" },
+  { name: "Hyderabad", state: "Telangana", note: "410 coaches" },
+  { name: "Chennai", state: "Tamil Nadu", note: "320 coaches" },
+  { name: "Kolkata", state: "West Bengal", note: "280 coaches" },
+  { name: "Ahmedabad", state: "Gujarat", note: "190 coaches" },
+  { name: "Jaipur", state: "Rajasthan", note: "140 coaches" },
+  { name: "Chandigarh", state: "Chandigarh", note: "120 coaches" },
 ];
+
+/** The state a listed city sits in. Cities are a fixed set, so this is 1:1. */
+export function stateForCity(cityName: string) {
+  return cityOptions.find((option) => option.name === cityName)?.state ?? "";
+}
 
 export function categoryById(id: string) {
   return searchCategories.find((category) => category.id === id) ?? null;

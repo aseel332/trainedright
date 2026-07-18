@@ -7,10 +7,13 @@ import { cityOptions, searchCategories } from "@/lib/search-categories";
 
 export function HomeHeroSearch() {
   const router = useRouter();
-  const [city, setCity] = useState("Bengaluru");
+  const [city, setCity] = useState("");
   const [category, setCategory] = useState<string | null>(null);
 
   function findCoaches() {
+    if (!city) {
+      return;
+    }
     const params = new URLSearchParams();
     params.set("city", city);
     if (category) {
@@ -32,8 +35,13 @@ export function HomeHeroSearch() {
             value={city}
             onChange={(event) => setCity(event.target.value)}
             aria-label="Your city"
-            className="h-full w-full appearance-none bg-transparent pl-11 pr-10 text-[15px] font-bold text-white outline-none [&>option]:bg-[#141417]"
+            className={`h-full w-full appearance-none bg-transparent pl-11 pr-10 text-[15px] font-bold outline-none [&>option]:bg-[#141417] ${
+              city ? "text-white" : "text-muted"
+            }`}
           >
+            <option value="" disabled>
+              Select your city
+            </option>
             {cityOptions.map((option) => (
               <option key={option.name} value={option.name}>
                 {option.name}
@@ -50,7 +58,8 @@ export function HomeHeroSearch() {
         <button
           type="button"
           onClick={findCoaches}
-          className="inline-flex h-14 items-center justify-center gap-2 rounded-[15px] bg-brand px-7 text-sm font-extrabold text-white transition hover:bg-brand-dark"
+          disabled={!city}
+          className="inline-flex h-14 items-center justify-center gap-2 rounded-[15px] bg-brand px-7 text-sm font-extrabold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-muted disabled:hover:bg-white/10"
         >
           Find coaches
           <ArrowRight aria-hidden="true" size={17} />

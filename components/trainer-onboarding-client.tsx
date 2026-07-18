@@ -17,6 +17,7 @@ import {
   Award,
   Check,
   CloudUpload,
+  Eye,
   FileText,
   ImagePlus,
   Loader2,
@@ -24,11 +25,16 @@ import {
   MessageCircle,
   Plus,
   Sparkles,
+  Star,
   Trash2,
   UserRound,
+  Users,
   X,
 } from "lucide-react";
 import { saveTrainerProfile } from "@/app/trainer/actions";
+import { TrainerProfilePreview } from "@/components/trainer-profile-preview";
+import { SOCIAL_ICON } from "@/components/social-icons";
+import { SOCIAL_PLATFORMS } from "@/lib/socials";
 import {
   cityOptions,
   searchCategories,
@@ -48,8 +54,7 @@ type StepId =
   | "welcome"
   | "location"
   | "categories"
-  | "specialties"
-  | "bio"
+  | "storefront"
   | "photos"
   | "plans"
   | "credentials"
@@ -69,38 +74,38 @@ const steps: StepDef[] = [
     id: "welcome",
     kicker: "Let's get you found",
     title: "What should clients call you?",
-    tip: "Use the name clients already know you by. The headline is your one-liner — think “Strength coach for busy professionals”, not a slogan.",
+    tip: "Use the name clients already know you by — the name they'd look for.",
+  },
+  {
+    id: "categories",
+    kicker: "How clients search",
+    title: "What kind of coach are you?",
+    tip: "These are the categories clients browse — gym trainer, sports coach, dietitian, and more. Pick every one that genuinely fits and you'll show up in each of those searches.",
   },
   {
     id: "location",
     kicker: "Where you coach",
     title: "Which city do you train in?",
-    tip: "Clients search by city first. The area helps them judge the commute — “Indiranagar” beats “East Bengaluru”.",
+    tip: "Clients search by city first. Your state is filled in automatically from the city you pick.",
     optional: true,
   },
   {
-    id: "categories",
-    kicker: "How clients search",
-    title: "Where should we list you?",
-    tip: "These are the categories clients browse. Pick every one that genuinely fits — you'll appear in each of those searches.",
+    id: "storefront",
+    kicker: "Your storefront",
+    title: "Photos, specialties, and your pitch.",
+    tip: "This is what sells you. Watch the live preview update as you add your photo, specialties, and description — that's exactly how clients will see you.",
   },
   {
-    id: "specialties",
-    kicker: "Your edge",
-    title: "Name your specialties — in your own words.",
-    tip: "Up to four, written by you. Be specific: “Post-injury strength” tells a client more than “Fitness”.",
-  },
-  {
-    id: "bio",
-    kicker: "Your pitch",
-    title: "Tell clients how you coach.",
-    tip: "Answer three things: who you help, how a session feels, and what changes in the first month. 2–4 honest sentences beat a wall of hype.",
+    id: "contact",
+    kicker: "Closing the loop",
+    title: "How can clients reach you?",
+    tip: "Clients message you on WhatsApp directly — no middleman. Add your socials too so they can see your work; they show as links on your profile.",
   },
   {
     id: "photos",
     kicker: "Show, don't tell",
-    title: "Add the photos clients check first.",
-    tip: "A clear face photo builds trust, the cover sets the vibe, and 3–6 gallery shots of real sessions do the selling.",
+    title: "Add a gallery of your work.",
+    tip: "3–6 shots of real sessions, your space, or results do the selling. These appear in the Photos & videos section of your profile.",
     optional: true,
   },
   {
@@ -116,12 +121,6 @@ const steps: StepDef[] = [
     title: "Add qualifications and awards.",
     tip: "Upload the certificate or award itself (image or PDF) with the date. Verified documents earn the badge clients filter by.",
     optional: true,
-  },
-  {
-    id: "contact",
-    kicker: "Closing the loop",
-    title: "Where should leads reach you?",
-    tip: "Clients message you on WhatsApp directly — no middleman. Use the number you actually answer, with country code.",
   },
   {
     id: "review",
@@ -228,7 +227,7 @@ export function TrainerOnboardingClient({
     if (step.id === "categories") {
       return profile.searchCategories.length === 0;
     }
-    if (step.id === "specialties") {
+    if (step.id === "storefront") {
       return profile.specialties.length === 0;
     }
     if (step.id === "contact") {
@@ -314,7 +313,11 @@ export function TrainerOnboardingClient({
         </div>
       </header>
 
-      <section className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-10 sm:px-6">
+      <section
+        className={`mx-auto flex w-full flex-1 flex-col px-4 py-10 sm:px-6 ${
+          step.id === "storefront" ? "max-w-6xl" : "max-w-3xl"
+        }`}
+      >
         <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-brand-light">
           {stepIndex + 1} / {steps.length} · {step.kicker}
         </p>
@@ -340,15 +343,7 @@ export function TrainerOnboardingClient({
                   icon={UserRound}
                   value={profile.name}
                   onChange={(name) => update({ name })}
-                  placeholder="e.g. Vikram Rao"
-                />
-              </Field>
-              <Field label="Headline" hint="optional">
-                <IconInput
-                  icon={Sparkles}
-                  value={profile.headline}
-                  onChange={(headline) => update({ headline })}
-                  placeholder="e.g. Strength coach for busy professionals"
+                  placeholder="e.g. your full name"
                 />
               </Field>
             </div>
@@ -365,7 +360,11 @@ export function TrainerOnboardingClient({
                         key={city.name}
                         type="button"
                         onClick={() =>
-                          update({ city: active ? "" : city.name })
+                          update(
+                            active
+                              ? { city: "", state: "" }
+                              : { city: city.name, state: city.state },
+                          )
                         }
                         className={`flex items-center gap-2 rounded-[13px] border px-3 py-3 text-left text-[13px] font-extrabold transition ${
                           active
@@ -384,13 +383,19 @@ export function TrainerOnboardingClient({
                   })}
                 </div>
               </Field>
-              <Field label="Area / neighbourhood" hint="optional">
-                <IconInput
-                  icon={MapPin}
-                  value={profile.area}
-                  onChange={(area) => update({ area })}
-                  placeholder="e.g. Indiranagar"
-                />
+              <Field label="State">
+                <div className="flex h-[52px] items-center gap-2 rounded-[14px] border border-white/10 bg-panel px-4 text-[15px] font-semibold">
+                  <MapPin
+                    aria-hidden="true"
+                    size={17}
+                    className={profile.state ? "text-brand-light" : "text-muted"}
+                  />
+                  {profile.state ? (
+                    <span className="text-white">{profile.state}</span>
+                  ) : (
+                    <span className="text-muted">Pick a city to set the state</span>
+                  )}
+                </div>
               </Field>
             </div>
           ) : null}
@@ -450,36 +455,21 @@ export function TrainerOnboardingClient({
             </div>
           ) : null}
 
-          {step.id === "specialties" ? (
-            <SpecialtiesEditor
-              specialties={profile.specialties}
-              onChange={(specialties) => update({ specialties })}
+          {step.id === "storefront" ? (
+            <StorefrontEditor
+              profile={profile}
+              userId={userId}
+              update={update}
             />
           ) : null}
 
-          {step.id === "bio" ? (
-            <div className="max-w-xl">
-              <textarea
-                value={profile.bio}
-                onChange={(event) => update({ bio: event.target.value })}
-                rows={7}
-                placeholder="e.g. I coach desk-bound professionals who want to get strong without living in the gym. Sessions are 60 minutes, tracked, and built around your schedule…"
-                className="w-full resize-none rounded-[16px] border border-white/10 bg-panel px-4 py-4 text-[15px] font-medium leading-7 text-white outline-none transition placeholder:text-muted focus:border-brand"
-              />
-              <p
-                className={`mt-2 text-[12px] font-bold ${
-                  profile.bio.trim().length >= 80
-                    ? "text-emerald-300"
-                    : "text-muted"
-                }`}
-              >
-                {profile.bio.trim().length} / 80 characters minimum
-              </p>
-            </div>
-          ) : null}
-
           {step.id === "photos" ? (
-            <PhotosEditor profile={profile} userId={userId} update={update} />
+            <PhotosEditor
+              profile={profile}
+              userId={userId}
+              update={update}
+              showSingles={false}
+            />
           ) : null}
 
           {step.id === "plans" ? (
@@ -498,7 +488,7 @@ export function TrainerOnboardingClient({
           ) : null}
 
           {step.id === "contact" ? (
-            <div className="max-w-xl space-y-5">
+            <div className="max-w-xl space-y-6">
               <Field label="WhatsApp number" required>
                 <IconInput
                   icon={MessageCircle}
@@ -508,15 +498,42 @@ export function TrainerOnboardingClient({
                   type="tel"
                 />
               </Field>
-              <Field label="Years of experience" hint="optional">
-                <IconInput
-                  icon={Award}
-                  value={profile.yearsExperience}
-                  onChange={(yearsExperience) => update({ yearsExperience })}
-                  placeholder="e.g. 6"
-                  type="number"
-                />
-              </Field>
+
+              <div>
+                <p className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
+                  Social profiles
+                  <span className="ml-2 font-bold normal-case tracking-normal text-white/30">
+                    optional
+                  </span>
+                </p>
+                <p className="mb-3 text-[12px] font-medium leading-5 text-muted">
+                  Paste a link or type your @handle — these become buttons on
+                  your profile so clients can see your work.
+                </p>
+                <div className="space-y-3">
+                  {SOCIAL_PLATFORMS.map((platform) => {
+                    const Icon = SOCIAL_ICON[platform.id];
+                    return (
+                      <span key={platform.id} className="relative block">
+                        <Icon
+                          size={17}
+                          className="absolute left-4 top-1/2 -translate-y-1/2 text-muted"
+                        />
+                        <input
+                          value={profile[platform.id]}
+                          onChange={(event) =>
+                            update({
+                              [platform.id]: event.target.value,
+                            } as Partial<TrainerProfileDraft>)
+                          }
+                          placeholder={`${platform.label} — ${platform.placeholder}`}
+                          className="h-[52px] w-full rounded-[14px] border border-white/10 bg-panel pl-11 pr-4 text-[15px] font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand"
+                        />
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           ) : null}
 
@@ -664,6 +681,256 @@ function IconInput({
   );
 }
 
+export function StorefrontEditor({
+  profile,
+  userId,
+  update,
+}: {
+  profile: TrainerProfileDraft;
+  userId: string;
+  update: (patch: Partial<TrainerProfileDraft>) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  async function uploadSingle(
+    files: FileList | null,
+    key: "avatarUrl" | "coverUrl",
+  ) {
+    const [file] = imageAssetsFrom(files);
+    if (!file) {
+      return;
+    }
+    setUploading(true);
+    const result = await uploadPublicFile(file, userId);
+    update({ [key]: result.url } as Partial<TrainerProfileDraft>);
+    setUploading(false);
+  }
+
+  const bioLength = profile.bio.trim().length;
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
+      <div className="min-w-0 space-y-7">
+        <div>
+          <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
+            Photos
+          </p>
+          <div className="flex flex-wrap items-start gap-5">
+            <UploadTile
+              label="Profile photo"
+              shape="circle"
+              url={profile.avatarUrl}
+              onFiles={(files) => uploadSingle(files, "avatarUrl")}
+              onClear={() => update({ avatarUrl: "" })}
+            />
+            <UploadTile
+              label="Cover image"
+              shape="wide"
+              url={profile.coverUrl}
+              onFiles={(files) => uploadSingle(files, "coverUrl")}
+              onClear={() => update({ coverUrl: "" })}
+            />
+          </div>
+          {uploading ? (
+            <p className="mt-3 inline-flex items-center gap-2 text-[12px] font-bold text-soft">
+              <Loader2 aria-hidden="true" size={14} className="animate-spin" />
+              Uploading…
+            </p>
+          ) : null}
+        </div>
+
+        <div>
+          <p className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
+            Specialties
+            <span className="ml-1 text-brand-light">*</span>
+          </p>
+          <p className="mb-3 text-[12px] font-medium leading-5 text-muted">
+            Up to four, in your own words — these show as tags on your card.
+          </p>
+          <SpecialtiesEditor
+            specialties={profile.specialties}
+            onChange={(specialties) => update({ specialties })}
+          />
+        </div>
+
+        <div>
+          <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
+            Description
+          </p>
+          <textarea
+            value={profile.bio}
+            onChange={(event) => update({ bio: event.target.value })}
+            rows={6}
+            placeholder="e.g. I coach desk-bound professionals who want to get strong without living in the gym. Sessions are 60 minutes, tracked, and built around your schedule…"
+            className="w-full resize-none rounded-[16px] border border-white/10 bg-panel px-4 py-4 text-[15px] font-medium leading-7 text-white outline-none transition placeholder:text-muted focus:border-brand"
+          />
+          <p
+            className={`mt-2 text-[12px] font-bold ${
+              bioLength >= 80 ? "text-emerald-300" : "text-muted"
+            }`}
+          >
+            {bioLength} / 80 characters minimum
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
+              Years of experience
+              <span className="ml-2 font-bold normal-case tracking-normal text-white/30">
+                optional
+              </span>
+            </p>
+            <IconInput
+              icon={Award}
+              value={profile.yearsExperience}
+              onChange={(yearsExperience) => update({ yearsExperience })}
+              placeholder="e.g. 6"
+              type="number"
+            />
+          </div>
+          <div>
+            <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
+              Number of clients
+              <span className="ml-2 font-bold normal-case tracking-normal text-white/30">
+                optional
+              </span>
+            </p>
+            <IconInput
+              icon={Users}
+              value={profile.clientsCount}
+              onChange={(clientsCount) => update({ clientsCount })}
+              placeholder="e.g. 40"
+              type="number"
+            />
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
+            On your listing card, show
+          </p>
+          <p className="mb-3 text-[12px] font-medium leading-5 text-muted">
+            Pick what fills the quote line of your search-results card. You can
+            change this any time.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <BlurbOption
+              active={profile.listingBlurb === "description"}
+              icon={FileText}
+              title="My description"
+              note="Use your own words right now."
+              onClick={() => update({ listingBlurb: "description" })}
+            />
+            <BlurbOption
+              active={profile.listingBlurb === "review"}
+              icon={Star}
+              title="A client review"
+              note="Feature a top review once you collect one."
+              onClick={() => update({ listingBlurb: "review" })}
+            />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(true)}
+          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-brand/40 bg-brand/10 text-sm font-extrabold text-brand-light transition hover:bg-brand/15 lg:hidden"
+        >
+          <Eye aria-hidden="true" size={17} />
+          Preview my profile
+        </button>
+      </div>
+
+      <aside className="hidden lg:block">
+        <div className="sticky top-8 rounded-[20px] border border-white/10 bg-panel/60 p-4">
+          <TrainerProfilePreview profile={profile} />
+        </div>
+      </aside>
+
+      {previewOpen ? (
+        <div className="fixed inset-0 z-[70] lg:hidden">
+          <button
+            type="button"
+            aria-label="Close preview"
+            onClick={() => setPreviewOpen(false)}
+            className="absolute inset-0 bg-black/70"
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-[26px] border-t border-white/10 bg-[#0d0d0f] p-5">
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-display text-[20px] font-black text-white">
+                Preview
+              </h2>
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(false)}
+                aria-label="Close"
+                className="grid h-9 w-9 place-items-center rounded-[12px] border border-white/10 bg-panel text-white"
+              >
+                <X aria-hidden="true" size={18} />
+              </button>
+            </div>
+            <TrainerProfilePreview profile={profile} />
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function BlurbOption({
+  active,
+  icon: Icon,
+  title,
+  note,
+  onClick,
+}: {
+  active: boolean;
+  icon: typeof FileText;
+  title: string;
+  note: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-start gap-3 rounded-[14px] border p-3.5 text-left transition ${
+        active
+          ? "border-brand/60 bg-brand/10"
+          : "border-white/10 bg-panel hover:border-white/25"
+      }`}
+    >
+      <span
+        className={`grid h-9 w-9 flex-none place-items-center rounded-[10px] ${
+          active ? "bg-brand text-white" : "bg-white/5 text-brand-light"
+        }`}
+      >
+        <Icon aria-hidden="true" size={17} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] font-extrabold text-white">
+          {title}
+        </span>
+        <span className="mt-0.5 block text-[11px] font-semibold text-muted">
+          {note}
+        </span>
+      </span>
+      <span
+        className={`mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full border ${
+          active ? "border-brand bg-brand" : "border-white/20"
+        }`}
+      >
+        {active ? (
+          <Check aria-hidden="true" size={12} className="text-white" />
+        ) : null}
+      </span>
+    </button>
+  );
+}
+
 export function SpecialtiesEditor({
   specialties,
   onChange,
@@ -786,10 +1053,13 @@ export function PhotosEditor({
   profile,
   userId,
   update,
+  showSingles = true,
 }: {
   profile: TrainerProfileDraft;
   userId: string;
   update: (patch: Partial<TrainerProfileDraft>) => void;
+  /** When false, only the gallery is shown (profile/cover live elsewhere). */
+  showSingles?: boolean;
 }) {
   const [uploading, setUploading] = useState(false);
 
@@ -825,22 +1095,24 @@ export function PhotosEditor({
 
   return (
     <div className="max-w-xl space-y-6">
-      <div className="flex flex-wrap items-center gap-5">
-        <UploadTile
-          label="Profile photo"
-          shape="circle"
-          url={profile.avatarUrl}
-          onFiles={(files) => uploadSingle(files, "avatarUrl")}
-          onClear={() => update({ avatarUrl: "" })}
-        />
-        <UploadTile
-          label="Cover image"
-          shape="wide"
-          url={profile.coverUrl}
-          onFiles={(files) => uploadSingle(files, "coverUrl")}
-          onClear={() => update({ coverUrl: "" })}
-        />
-      </div>
+      {showSingles ? (
+        <div className="flex flex-wrap items-center gap-5">
+          <UploadTile
+            label="Profile photo"
+            shape="circle"
+            url={profile.avatarUrl}
+            onFiles={(files) => uploadSingle(files, "avatarUrl")}
+            onClear={() => update({ avatarUrl: "" })}
+          />
+          <UploadTile
+            label="Cover image"
+            shape="wide"
+            url={profile.coverUrl}
+            onFiles={(files) => uploadSingle(files, "coverUrl")}
+            onClear={() => update({ coverUrl: "" })}
+          />
+        </div>
+      ) : null}
 
       <div>
         <div className="mb-3 flex items-center justify-between gap-3">

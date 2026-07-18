@@ -2,6 +2,7 @@ import type { Trainer, TrainerSort } from "@/lib/types";
 
 type TrainerQuery = {
   query?: string;
+  city?: string;
   specs?: string[];
   verified?: boolean;
   maxPrice?: number;
@@ -22,14 +23,19 @@ export function filterAndSortTrainers(
   options: TrainerQuery = {},
 ) {
   const search = options.query?.trim().toLowerCase();
+  const city = options.city?.trim().toLowerCase();
   const specs = options.specs ?? [];
   const maxPrice = options.maxPrice ?? 0;
 
   let result = trainers.filter((trainer) => {
+    if (city && trainer.city.trim().toLowerCase() !== city) {
+      return false;
+    }
+
     const searchable = [
       trainer.name,
       trainer.city,
-      trainer.area,
+      trainer.state,
       trainer.bio,
       ...trainer.specialties,
       ...trainer.tags,

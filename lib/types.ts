@@ -8,6 +8,7 @@ export type Trainer = {
   name: string;
   firstName: string;
   city: string;
+  state: string;
   area: string;
   bio: string;
   avatarUrl: string;
@@ -20,6 +21,9 @@ export type Trainer = {
   replyTimeLabel: string;
   priceFromInr: number;
   whatsappNumber: string;
+  instagram: string;
+  x: string;
+  youtube: string;
   specialties: string[];
   tags: string[];
   badges: TrainerBadge[];

@@ -74,6 +74,7 @@ export default async function AdminPage() {
       headline: profile.headline,
       bio: profile.bio,
       city: profile.city,
+      state: profile.state,
       area: profile.area,
       whatsapp: profile.whatsapp,
       yearsExperience: profile.yearsExperience,

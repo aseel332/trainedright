@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { categoryIdsToSpecs } from "@/lib/search-categories";
+import { categoryIdsToSpecs, stateForCity } from "@/lib/search-categories";
 import { createAdminSupabaseClient } from "@/lib/server/supabase-admin";
 import { parseProfileDraft, type TrainerProfileDraft } from "@/lib/trainer-profile";
 
@@ -84,6 +84,11 @@ export function normalizeWhatsapp(value: string) {
 function yearsOf(value: string) {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 80) : 0;
+}
+
+function clientsOf(value: string) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 100000) : 0;
 }
 
 function priceFrom(profile: TrainerProfileDraft) {
@@ -204,6 +209,15 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
   const topReview = [...reviews].sort(
     (a, b) => Number(b.rating ?? 0) - Number(a.rating ?? 0),
   )[0];
+  const topReviewText = topReview ? String(topReview.review_text ?? "").trim() : "";
+
+  // The coach chooses what their listing card quote shows: their own
+  // description, or a top client review. "review" falls back to the
+  // description until a review exists, so the card is never blank.
+  const listingTestimonial =
+    profile.listingBlurb === "review" && topReviewText
+      ? topReviewText
+      : profile.bio.trim();
 
   // The profile photo is what clients see on the listing card; the cover is
   // the wide shot behind the detail page hero. A trainer who never uploaded a
@@ -218,6 +232,7 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
     first_name: name.split(/\s+/)[0] ?? name,
     // Never invent a location: a wrong city puts them in the wrong searches.
     city: profile.city,
+    state: profile.state || stateForCity(profile.city),
     area: profile.area,
     bio: profile.bio,
     avatar_url: avatarUrl,
@@ -227,27 +242,53 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
     rating,
     review_count: reviews.length,
     years_experience: yearsOf(profile.yearsExperience),
-    clients_count: 0,
+    clients_count: clientsOf(profile.clientsCount),
     reply_time_label: "~24 hrs",
     price_from_inr: priceFrom(profile),
     whatsapp_number: whatsapp,
+    instagram: profile.instagram.trim(),
+    x: profile.x.trim(),
+    youtube: profile.youtube.trim(),
     // The public listing filters by category through `specialties`, so that
     // column carries the fixed taxonomy. The trainer's own free-text
     // specialties stay searchable as `tags`.
     specialties: categoryIdsToSpecs(profile.searchCategories),
     tags: profile.specialties,
     badges: ["verified"],
-    testimonial: topReview ? String(topReview.review_text ?? "") : "",
+    testimonial: listingTestimonial,
     is_verified: true,
     is_active: true,
     sort_rank: 0,
   };
 
-  const { data: published, error: upsertError } = await supabase
-    .from("trainers")
-    .upsert(trainerRow, { onConflict: "user_id" })
-    .select("id, slug")
-    .single();
+  // Drop any column the live schema doesn't have yet (e.g. state, socials
+  // before their migration is applied), one per retry, so an unapplied
+  // migration degrades gracefully instead of failing the whole publish.
+  async function upsertTrainerRow(db: SupabaseClient) {
+    const row: Record<string, unknown> = { ...trainerRow };
+    for (let i = 0; i < 6; i += 1) {
+      const result = await db
+        .from("trainers")
+        .upsert(row, { onConflict: "user_id" })
+        .select("id, slug")
+        .single();
+      const missing = result.error?.message.match(
+        /could not find the '([^']+)' column/i,
+      );
+      if (missing && missing[1] in row) {
+        delete row[missing[1]];
+        continue;
+      }
+      return result;
+    }
+    return db
+      .from("trainers")
+      .upsert(row, { onConflict: "user_id" })
+      .select("id, slug")
+      .single();
+  }
+
+  const { data: published, error: upsertError } = await upsertTrainerRow(supabase);
 
   if (upsertError || !published) {
     return { ok: false, error: upsertError?.message ?? "Could not publish the profile." };

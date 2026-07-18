@@ -3,7 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseAuthConfig } from "@/lib/supabase-config";
 
 /** Routes that require a signed-in trainer. */
-const PROTECTED_PREFIXES = ["/trainer/dashboard", "/trainer/onboarding"];
+const PROTECTED_PREFIXES = [
+  "/trainer/dashboard",
+  "/trainer/onboarding",
+  "/trainer/verify-phone",
+];
 
 /** The sign-in / sign-up screen. Signed-in trainers are sent back out of it. */
 const AUTH_PATH = "/trainer/auth";

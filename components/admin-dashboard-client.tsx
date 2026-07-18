@@ -39,6 +39,7 @@ export type AdminTrainerRow = {
   headline: string;
   bio: string;
   city: string;
+  state: string;
   area: string;
   whatsapp: string;
   yearsExperience: string;
@@ -212,7 +213,7 @@ function TrainerCard({
               <span className="inline-flex items-center gap-1">
                 <MapPin aria-hidden="true" size={13} className="text-muted" />
                 {trainer.city}
-                {trainer.area ? ` · ${trainer.area}` : ""}
+                {trainer.state ? ` · ${trainer.state}` : ""}
               </span>
             ) : null}
             <span>Joined {formatDate(trainer.createdAt)}</span>

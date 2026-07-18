@@ -2,6 +2,7 @@ import "server-only";
 
 import { createPublicServerClient } from "@/lib/server/supabase-public";
 import { connection } from "next/server";
+import { stateForCity } from "@/lib/search-categories";
 import { filterAndSortTrainers } from "@/lib/trainer-utils";
 import type {
   PricingOption,
@@ -32,6 +33,7 @@ type TrainerRow = {
   name: string;
   first_name: string;
   city: string;
+  state?: string | null;
   area: string;
   bio: string;
   avatar_url: string;
@@ -44,6 +46,9 @@ type TrainerRow = {
   reply_time_label: string;
   price_from_inr: number;
   whatsapp_number?: string | null;
+  instagram?: string | null;
+  x?: string | null;
+  youtube?: string | null;
   specialties: string[] | null;
   tags: string[] | null;
   badges: string[] | null;
@@ -153,6 +158,9 @@ function mapTrainer(row: TrainerRow): Trainer {
     name: row.name,
     firstName: row.first_name,
     city: row.city,
+    // The state column may not be populated yet (pre-migration); derive it
+    // from the city so cards always have it.
+    state: row.state || stateForCity(row.city),
     area: row.area,
     bio: row.bio,
     avatarUrl: row.avatar_url,
@@ -165,6 +173,9 @@ function mapTrainer(row: TrainerRow): Trainer {
     replyTimeLabel: row.reply_time_label,
     priceFromInr: row.price_from_inr,
     whatsappNumber: row.whatsapp_number ?? "",
+    instagram: row.instagram ?? "",
+    x: row.x ?? "",
+    youtube: row.youtube ?? "",
     specialties: stringArray(row.specialties),
     tags: stringArray(row.tags),
     badges: badgeArray(row.badges),

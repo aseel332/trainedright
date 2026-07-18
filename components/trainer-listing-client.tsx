@@ -35,8 +35,6 @@ const STORAGE_KEYS = {
   goals: "tr_goals",
 };
 
-const fallbackCity = "Bengaluru";
-
 const categoryIcons: Record<string, typeof Dumbbell> = {
   gym: Dumbbell,
   sport: Trophy,
@@ -79,7 +77,7 @@ export function TrainerListingClient({
   );
   const [maxPrice, setMaxPrice] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [city, setCity] = useState(initialCity || fallbackCity);
+  const [city, setCity] = useState(initialCity);
   const [selectedGoals, setSelectedGoals] = useState<string[]>(
     initialCategory ? [initialCategory] : [],
   );
@@ -141,12 +139,13 @@ export function TrainerListingClient({
     () =>
       filterAndSortTrainers(trainers, {
         query,
+        city,
         sort,
         verified,
         specs,
         maxPrice,
       }),
-    [maxPrice, query, sort, specs, trainers, verified],
+    [city, maxPrice, query, sort, specs, trainers, verified],
   );
 
   const activeGoalLabel = useMemo(
@@ -155,6 +154,8 @@ export function TrainerListingClient({
   );
 
   const filterCount = (verified ? 1 : 0) + specs.length + (maxPrice ? 1 : 0);
+
+  const cityLabel = city || "All cities";
 
   function toggleSpec(spec: string) {
     setSpecs((current) =>
@@ -253,7 +254,7 @@ export function TrainerListingClient({
                   onClick={() => setDialog("city")}
                   className="mt-0.5 inline-flex max-w-full items-center gap-1.5 text-left font-display text-[26px] font-black leading-none text-white transition hover:text-brand-light md:text-[34px]"
                 >
-                  <span className="truncate">{city}</span>
+                  <span className="truncate">{cityLabel}</span>
                   <ChevronDown
                     aria-hidden="true"
                     className="flex-none text-brand-light"
@@ -419,8 +420,12 @@ export function TrainerListingClient({
               </p>
               <p className="mt-1 text-[12px] font-semibold text-muted">
                 {selectedGoals.length === 0
-                  ? `Showing available trainers near ${city}`
-                  : `${activeGoalLabel} near ${city}`}
+                  ? city
+                    ? `Showing available trainers in ${city}`
+                    : "Showing available trainers across all cities"
+                  : city
+                    ? `${activeGoalLabel} in ${city}`
+                    : `${activeGoalLabel} across all cities`}
               </p>
             </div>
             {filterCount > 0 ? (
@@ -786,7 +791,7 @@ function OnboardingDialog({
             if (step === 0) {
               setStep(1);
             } else {
-              onSave(city || fallbackCity, goals);
+              onSave(city, goals);
             }
           }}
           className="h-12 flex-1 rounded-[14px] bg-brand px-5 text-sm font-extrabold text-white transition disabled:bg-white/10 disabled:text-muted"

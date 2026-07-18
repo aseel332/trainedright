@@ -13,12 +13,14 @@ import {
 } from "lucide-react";
 import { BadgeIcon } from "@/components/badge-icon";
 import { BookingBar } from "@/components/booking-bar";
+import { InstagramIcon, XIcon, YoutubeIcon } from "@/components/social-icons";
 import { ProfileActions } from "@/components/profile-actions";
 import { MediaGallery } from "@/components/media-gallery";
 import { ReviewsSection } from "@/components/reviews-section";
 import { StoryCard } from "@/components/story-card";
 import { TransformationCard } from "@/components/transformation-card";
 import { getTrainerProfile } from "@/lib/server/data";
+import { normalizeSocialUrl } from "@/lib/socials";
 import { formatPriceInr } from "@/lib/trainer-utils";
 import type {
   PricingOption,
@@ -260,9 +262,54 @@ function ProfileHero({ trainer }: { trainer: TrainerProfile }) {
               </>
             ) : null}
           </div>
+          <SocialLinks trainer={trainer} />
         </div>
       </div>
     </section>
+  );
+}
+
+function SocialLinks({ trainer }: { trainer: TrainerProfile }) {
+  const links = [
+    {
+      id: "instagram",
+      label: "Instagram",
+      url: normalizeSocialUrl("instagram", trainer.instagram),
+      Icon: InstagramIcon,
+    },
+    {
+      id: "x",
+      label: "X",
+      url: normalizeSocialUrl("x", trainer.x),
+      Icon: XIcon,
+    },
+    {
+      id: "youtube",
+      label: "YouTube",
+      url: normalizeSocialUrl("youtube", trainer.youtube),
+      Icon: YoutubeIcon,
+    },
+  ].filter((link) => link.url);
+
+  if (links.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-5 flex items-center gap-2.5">
+      {links.map(({ id, label, url, Icon }) => (
+        <a
+          key={id}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${trainer.firstName} on ${label}`}
+          className="grid h-11 w-11 place-items-center rounded-full border border-white/15 bg-black/45 text-white backdrop-blur transition hover:border-brand/60 hover:bg-black/60 hover:text-brand-light"
+        >
+          <Icon size={18} />
+        </a>
+      ))}
+    </div>
   );
 }
 

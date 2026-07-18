@@ -1,3 +1,5 @@
+import { stateForCity } from "@/lib/search-categories";
+
 export const MAX_SPECIALTIES = 4;
 
 export type ProfilePlan = {
@@ -23,18 +25,28 @@ export type ProfileMediaItem = {
   name: string;
 };
 
+/** What the listing card's quote line shows. */
+export type ListingBlurb = "description" | "review";
+
 export type TrainerProfileDraft = {
   name: string;
   headline: string;
   bio: string;
   city: string;
+  state: string;
   area: string;
   whatsapp: string;
+  instagram: string;
+  x: string;
+  youtube: string;
   yearsExperience: string;
+  clientsCount: string;
   specialties: string[];
   searchCategories: string[];
   avatarUrl: string;
   coverUrl: string;
+  /** Whether the listing card highlights the bio or a top client review. */
+  listingBlurb: ListingBlurb;
   gallery: ProfileMediaItem[];
   plans: ProfilePlan[];
   credentials: ProfileCredential[];
@@ -45,13 +57,19 @@ export const emptyProfile: TrainerProfileDraft = {
   headline: "",
   bio: "",
   city: "",
+  state: "",
   area: "",
   whatsapp: "",
+  instagram: "",
+  x: "",
+  youtube: "",
   yearsExperience: "",
+  clientsCount: "",
   specialties: [],
   searchCategories: [],
   avatarUrl: "",
   coverUrl: "",
+  listingBlurb: "description",
   gallery: [],
   plans: [],
   credentials: [],
@@ -145,13 +163,20 @@ export function parseProfileDraft(value: unknown): TrainerProfileDraft {
     headline: stringOf(raw.headline),
     bio: stringOf(raw.bio),
     city: stringOf(raw.city),
+    // Older drafts predate `state`; fall back to the city's state.
+    state: stringOf(raw.state) || stateForCity(stringOf(raw.city)),
     area: stringOf(raw.area),
     whatsapp: stringOf(raw.whatsapp),
+    instagram: stringOf(raw.instagram),
+    x: stringOf(raw.x),
+    youtube: stringOf(raw.youtube),
     yearsExperience: stringOf(raw.yearsExperience),
+    clientsCount: stringOf(raw.clientsCount),
     specialties: stringArrayOf(raw.specialties).slice(0, MAX_SPECIALTIES),
     searchCategories: stringArrayOf(raw.searchCategories),
     avatarUrl: stringOf(raw.avatarUrl),
     coverUrl: stringOf(raw.coverUrl),
+    listingBlurb: raw.listingBlurb === "review" ? "review" : "description",
     gallery: galleryOf(raw.gallery),
     plans: plansOf(raw.plans),
     credentials: credentialsOf(raw.credentials),
@@ -199,6 +224,14 @@ export function profileRequirements(
 
 export function profileIsSubmittable(profile: TrainerProfileDraft) {
   return profileRequirements(profile).every((item) => item.done);
+}
+
+/** The "from" price shown on cards — the cheapest paid plan, or 0 if none. */
+export function profilePriceFromInr(profile: TrainerProfileDraft) {
+  const prices = profile.plans
+    .map((plan) => plan.price)
+    .filter((price): price is number => typeof price === "number" && price > 0);
+  return prices.length > 0 ? Math.round(Math.min(...prices)) : 0;
 }
 
 export function profileCompletionPercent(profile: TrainerProfileDraft) {

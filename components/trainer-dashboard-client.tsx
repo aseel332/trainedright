@@ -42,14 +42,18 @@ import {
   CredentialsEditor,
   PhotosEditor,
   PlansEditor,
-  SpecialtiesEditor,
+  StorefrontEditor,
 } from "@/components/trainer-onboarding-client";
 import type {
   ReviewRequestItem,
   TransformationRequestItem,
 } from "@/lib/link-requests";
 import type { TrainerAnalytics } from "@/lib/types";
-import { cityOptions, searchCategories } from "@/lib/search-categories";
+import {
+  cityOptions,
+  searchCategories,
+  stateForCity,
+} from "@/lib/search-categories";
 import {
   profileCompletionPercent,
   profileRequirements,
@@ -87,8 +91,8 @@ const sections: {
   },
   {
     id: "media",
-    label: "Media",
-    detail: "Avatar, cover, gallery",
+    label: "Gallery",
+    detail: "Extra profile photos",
     icon: Images,
   },
   {
@@ -399,18 +403,27 @@ export function TrainerDashboardClient({
           {section === "profile" ? (
             <Panel
               title="Profile"
-              note="Everything clients read about you."
+              note="Everything clients read about you — the preview updates as you edit."
             >
-              <ProfileEditor profile={profile} update={update} />
+              <ProfileEditor
+                profile={profile}
+                userId={userId}
+                update={update}
+              />
             </Panel>
           ) : null}
 
           {section === "media" ? (
             <Panel
-              title="Media"
-              note="Select multiple photos at once — remove any with the ×."
+              title="Gallery"
+              note="Extra photos for your profile — select multiple at once, remove any with the ×."
             >
-              <PhotosEditor profile={profile} userId={userId} update={update} />
+              <PhotosEditor
+                profile={profile}
+                userId={userId}
+                update={update}
+                showSingles={false}
+              />
             </Panel>
           ) : null}
 
@@ -929,25 +942,21 @@ function StatTile({
 
 function ProfileEditor({
   profile,
+  userId,
   update,
 }: {
   profile: TrainerProfileDraft;
+  userId: string;
   update: (patch: Partial<TrainerProfileDraft>) => void;
 }) {
   return (
-    <div className="space-y-7">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <LabeledInput
           label="Name"
           value={profile.name}
           onChange={(name) => update({ name })}
           placeholder="Your public name"
-        />
-        <LabeledInput
-          label="Headline"
-          value={profile.headline}
-          onChange={(headline) => update({ headline })}
-          placeholder="e.g. Strength coach for busy professionals"
         />
         <label className="block">
           <span className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted">
@@ -955,7 +964,12 @@ function ProfileEditor({
           </span>
           <select
             value={profile.city}
-            onChange={(event) => update({ city: event.target.value })}
+            onChange={(event) =>
+              update({
+                city: event.target.value,
+                state: stateForCity(event.target.value),
+              })
+            }
             className="mt-2 h-12 w-full appearance-none rounded-[14px] border border-white/10 bg-black/30 px-4 text-sm font-semibold text-white outline-none transition focus:border-brand [&>option]:bg-[#141417]"
           >
             <option value="">Select a city</option>
@@ -966,80 +980,87 @@ function ProfileEditor({
             ))}
           </select>
         </label>
-        <LabeledInput
-          label="Area"
-          value={profile.area}
-          onChange={(area) => update({ area })}
-          placeholder="e.g. Indiranagar"
-        />
-        <LabeledInput
-          label="WhatsApp number"
-          value={profile.whatsapp}
-          onChange={(whatsapp) => update({ whatsapp })}
-          placeholder="919876543210"
-        />
-        <LabeledInput
-          label="Years of experience"
-          value={profile.yearsExperience}
-          onChange={(yearsExperience) => update({ yearsExperience })}
-          placeholder="e.g. 6"
-          type="number"
-        />
+        <label className="block">
+          <span className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted">
+            State
+          </span>
+          <div className="mt-2 flex h-12 items-center rounded-[14px] border border-white/10 bg-black/30 px-4 text-sm font-semibold text-white">
+            {profile.state || (
+              <span className="text-muted">Set from your city</span>
+            )}
+          </div>
+        </label>
       </div>
 
-      <label className="block">
-        <span className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted">
-          Bio
-        </span>
-        <textarea
-          value={profile.bio}
-          onChange={(event) => update({ bio: event.target.value })}
-          rows={5}
-          className="mt-2 w-full resize-none rounded-[14px] border border-white/10 bg-black/30 px-4 py-3 text-sm font-medium leading-6 text-white outline-none transition focus:border-brand"
-        />
-      </label>
+      {/* The card + description editor, shared with onboarding so both places
+          edit the profile the same way, with the live preview. */}
+      <StorefrontEditor profile={profile} userId={userId} update={update} />
 
-      <div>
-        <p className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted">
-          Search categories — where clients find you
-        </p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {searchCategories.map((category) => {
-            const active = profile.searchCategories.includes(category.id);
-            return (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() =>
-                  update({
-                    searchCategories: active
-                      ? profile.searchCategories.filter(
-                          (id) => id !== category.id,
-                        )
-                      : [...profile.searchCategories, category.id],
-                  })
-                }
-                className={`rounded-full border px-3.5 py-2 text-[12px] font-extrabold transition ${
-                  active
-                    ? "border-brand bg-brand text-white"
-                    : "border-white/10 bg-black/30 text-soft hover:border-brand/40"
-                }`}
-              >
-                {category.label}
-              </button>
-            );
-          })}
+      <div className="space-y-6 border-t border-white/10 pt-8">
+        <div>
+          <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted">
+            Contact &amp; socials
+          </p>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <LabeledInput
+              label="WhatsApp number"
+              value={profile.whatsapp}
+              onChange={(whatsapp) => update({ whatsapp })}
+              placeholder="919876543210"
+            />
+            <LabeledInput
+              label="Instagram"
+              value={profile.instagram}
+              onChange={(instagram) => update({ instagram })}
+              placeholder="@handle or link"
+            />
+            <LabeledInput
+              label="X"
+              value={profile.x}
+              onChange={(x) => update({ x })}
+              placeholder="@handle or link"
+            />
+            <LabeledInput
+              label="YouTube"
+              value={profile.youtube}
+              onChange={(youtube) => update({ youtube })}
+              placeholder="@channel or link"
+            />
+          </div>
         </div>
-      </div>
 
-      <div>
-        <p className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted">
-          Specialties — your own words, up to 4
-        </p>
-        <SpecialtiesEditor
-          specialties={profile.specialties}
-          onChange={(specialties) => update({ specialties })}
-        />
+        <div>
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted">
+            Search categories — where clients find you
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {searchCategories.map((category) => {
+              const active = profile.searchCategories.includes(category.id);
+              return (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() =>
+                    update({
+                      searchCategories: active
+                        ? profile.searchCategories.filter(
+                            (id) => id !== category.id,
+                          )
+                        : [...profile.searchCategories, category.id],
+                    })
+                  }
+                  className={`rounded-full border px-3.5 py-2 text-[12px] font-extrabold transition ${
+                    active
+                      ? "border-brand bg-brand text-white"
+                      : "border-white/10 bg-black/30 text-soft hover:border-brand/40"
+                  }`}
+                >
+                  {category.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );
