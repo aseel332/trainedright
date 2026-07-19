@@ -63,7 +63,6 @@ export function TrainerDetailPreview({
   const stats = [
     clients > 0 ? { value: `${clients}+`, label: "Clients" } : null,
     years > 0 ? { value: `${years} yrs`, label: "Exp" } : null,
-    { value: "~24 hrs", label: "Replies" },
     { value: "New", label: "Rating" },
   ].filter((stat): stat is { value: string; label: string } => stat !== null);
 
@@ -126,13 +125,13 @@ export function TrainerDetailPreview({
 
       <div className="space-y-8 p-6">
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="flex gap-2">
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="rounded-[14px] border border-white/10 bg-panel p-4 text-center"
+              className="flex-1 rounded-[14px] border border-white/10 bg-panel p-3 text-center sm:p-4"
             >
-              <div className="font-display text-[22px] font-black text-white">
+              <div className="font-display text-[20px] font-black text-white sm:text-[22px]">
                 {stat.value}
               </div>
               <div className="mt-1 text-[10px] font-extrabold uppercase text-muted">

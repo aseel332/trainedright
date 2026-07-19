@@ -318,20 +318,19 @@ function StatsGrid({ trainer }: { trainer: TrainerProfile }) {
     trainer.yearsExperience > 0
       ? { value: `${trainer.yearsExperience} yrs`, label: "Exp" }
       : null,
-    { value: trainer.replyTimeLabel, label: "Replies" },
     trainer.reviewCount > 0
       ? { value: trainer.rating.toFixed(1), label: "Rating" }
       : { value: "New", label: "Rating" },
   ].filter((stat): stat is { value: string; label: string } => stat !== null);
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <div className="flex gap-2">
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className="rounded-[14px] border border-white/10 bg-panel p-4 text-center"
+          className="flex-1 rounded-[14px] border border-white/10 bg-panel p-3 text-center sm:p-4"
         >
-          <div className="font-display text-[22px] font-black text-white">
+          <div className="font-display text-[20px] font-black text-white sm:text-[22px]">
             {stat.value}
           </div>
           <div className="mt-1 text-[10px] font-extrabold uppercase text-muted">
