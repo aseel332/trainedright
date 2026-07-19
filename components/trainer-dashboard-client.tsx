@@ -10,6 +10,7 @@ import {
   Check,
   ClipboardCheck,
   Copy,
+  CreditCard,
   Dumbbell,
   ExternalLink,
   Hourglass,
@@ -22,6 +23,7 @@ import {
   Menu,
   Newspaper,
   Plus,
+  Receipt,
   Send,
   Star,
   Trash2,
@@ -59,10 +61,16 @@ import {
   profileRequirements,
   type TrainerProfileDraft,
 } from "@/lib/trainer-profile";
+import {
+  hasPaidSubscriptionPlans,
+  subscriptionPlans,
+  type SubscriptionPlan,
+} from "@/lib/subscription-plans";
 import { uploadPublicFile } from "@/lib/client/upload";
 
 type SectionId =
   | "overview"
+  | "billing"
   | "profile"
   | "media"
   | "plans"
@@ -82,6 +90,12 @@ const sections: {
     label: "Overview",
     detail: "Analytics and status",
     icon: LayoutDashboard,
+  },
+  {
+    id: "billing",
+    label: "Subscription",
+    detail: "Plan and payments",
+    icon: CreditCard,
   },
   {
     id: "profile",
@@ -400,6 +414,10 @@ export function TrainerDashboardClient({
             />
           ) : null}
 
+          {section === "billing" ? (
+            <BillingSection profile={profile} />
+          ) : null}
+
           {section === "profile" ? (
             <Panel
               title="Profile"
@@ -530,6 +548,153 @@ function Panel({
         <p className="mt-2 text-[13px] font-semibold text-muted">{note}</p>
       ) : null}
       <div className="mt-6">{children}</div>
+    </div>
+  );
+}
+
+/* ------------------------------ Billing ------------------------------ */
+
+function BillingSection({ profile }: { profile: TrainerProfileDraft }) {
+  const currentPlan =
+    subscriptionPlans.find((plan) => plan.id === profile.subscriptionPlan) ??
+    subscriptionPlans[0];
+
+  return (
+    <div className="space-y-6">
+      <Panel title="Subscription" note="Your current plan and options.">
+        <div className="rounded-[18px] border border-brand/30 bg-brand/[0.07] p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-brand-light">
+                Current plan
+              </p>
+              <div className="mt-1 flex flex-wrap items-baseline gap-2">
+                <h3 className="font-display text-[24px] font-black text-white">
+                  {currentPlan.name}
+                </h3>
+                <span className="text-[13px] font-semibold text-muted">
+                  {currentPlan.price} · {currentPlan.cadence}
+                </span>
+              </div>
+              <p className="mt-2 max-w-md text-[13px] font-medium leading-6 text-soft">
+                {currentPlan.description}
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-extrabold uppercase text-emerald-300">
+              <Check aria-hidden="true" size={13} />
+              Active
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted">
+            Plans
+          </p>
+          <div className="grid gap-3 md:grid-cols-2">
+            {subscriptionPlans.map((plan) => (
+              <BillingPlanCard
+                key={plan.id}
+                plan={plan}
+                current={plan.id === currentPlan.id}
+              />
+            ))}
+            {!hasPaidSubscriptionPlans ? <ContactBillingCard /> : null}
+          </div>
+        </div>
+      </Panel>
+
+      <Panel
+        title="Payment history"
+        note="Invoices and receipts will show up here."
+      >
+        <div className="overflow-hidden rounded-[16px] border border-white/10">
+          <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-white/10 bg-white/[0.03] px-4 py-3 text-[10px] font-extrabold uppercase tracking-[0.12em] text-muted sm:grid-cols-[1fr_1.4fr_auto_auto]">
+            <span>Date</span>
+            <span className="hidden sm:block">Description</span>
+            <span className="hidden sm:block">Amount</span>
+            <span className="text-right">Status</span>
+          </div>
+          <div className="grid place-items-center gap-3 px-4 py-12 text-center">
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-white/[0.05] text-muted">
+              <Receipt aria-hidden="true" size={22} />
+            </span>
+            <div>
+              <p className="text-[14px] font-extrabold text-white">
+                No payments yet
+              </p>
+              <p className="mx-auto mt-1 max-w-sm text-[12.5px] font-medium leading-6 text-muted">
+                You&apos;re on the free trial, so there&apos;s nothing to bill.
+                When paid plans launch, your invoices and receipts appear here.
+              </p>
+            </div>
+          </div>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function BillingPlanCard({
+  plan,
+  current,
+}: {
+  plan: SubscriptionPlan;
+  current: boolean;
+}) {
+  return (
+    <div
+      className={`flex flex-col rounded-[16px] border p-4 ${
+        current ? "border-brand/50 bg-brand/[0.07]" : "border-white/10 bg-black/30"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[14px] font-extrabold text-white">{plan.name}</p>
+        {current ? (
+          <span className="rounded-full bg-brand px-2.5 py-1 text-[9px] font-extrabold uppercase text-white">
+            Current
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-1 flex items-baseline gap-1.5">
+        <span className="font-display text-[20px] font-black text-white">
+          {plan.price}
+        </span>
+        <span className="text-[11px] font-semibold text-muted">
+          {plan.cadence}
+        </span>
+      </div>
+      <ul className="mt-3 space-y-1.5">
+        {plan.features.map((feature) => (
+          <li
+            key={feature}
+            className="flex items-start gap-2 text-[12px] font-semibold text-soft"
+          >
+            <Check
+              aria-hidden="true"
+              size={13}
+              className="mt-0.5 flex-none text-brand-light"
+            />
+            {feature}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ContactBillingCard() {
+  return (
+    <div className="flex flex-col rounded-[16px] border border-dashed border-white/15 bg-black/20 p-4">
+      <p className="text-[14px] font-extrabold text-white">Paid plans</p>
+      <p className="mt-1 text-[12px] font-medium leading-5 text-muted">
+        Custom and paid membership tiers are coming soon. For anything beyond
+        the free trial, contact us for details.
+      </p>
+      <div className="mt-auto flex items-center gap-2 pt-3 text-[12.5px] font-extrabold text-brand-light">
+        <CreditCard aria-hidden="true" size={14} />
+        Contact for details
+      </div>
     </div>
   );
 }

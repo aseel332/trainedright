@@ -4,7 +4,6 @@ type TrainerQuery = {
   query?: string;
   city?: string;
   specs?: string[];
-  verified?: boolean;
   maxPrice?: number;
   sort?: TrainerSort;
   limit?: number;
@@ -44,10 +43,6 @@ export function filterAndSortTrainers(
       .toLowerCase();
 
     if (search && !searchable.includes(search)) {
-      return false;
-    }
-
-    if (options.verified && !trainer.isVerified) {
       return false;
     }
 

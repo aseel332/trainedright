@@ -5,7 +5,7 @@ import { searchCategories } from "@/lib/search-categories";
 
 export const metadata: Metadata = {
   title: "Browse Trainers | TrainedRight",
-  description: "Search and filter verified trainers on TrainedRight.",
+  description: "Search and filter trainers on TrainedRight.",
 };
 
 export default async function TrainersPage({
@@ -15,7 +15,6 @@ export default async function TrainersPage({
 }) {
   const params = await searchParams;
   const query = typeof params.q === "string" ? params.q : "";
-  const verified = params.verified === "true";
   const city = typeof params.city === "string" ? params.city : "";
   const cat =
     typeof params.cat === "string" &&
@@ -29,7 +28,6 @@ export default async function TrainersPage({
       <TrainerListingClient
         trainers={trainers}
         initialQuery={query}
-        initialVerified={verified}
         initialCity={city}
         initialCategory={cat}
       />

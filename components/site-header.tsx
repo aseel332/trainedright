@@ -15,12 +15,6 @@ export function SiteHeader() {
             Find coaches
           </Link>
           <Link
-            href="/trainers?verified=true"
-            className="rounded-full px-4 py-2 text-sm font-bold text-soft transition hover:text-white"
-          >
-            Verified
-          </Link>
-          <Link
             href="/trainer"
             className="rounded-full px-4 py-2 text-sm font-bold text-soft transition hover:text-white"
           >

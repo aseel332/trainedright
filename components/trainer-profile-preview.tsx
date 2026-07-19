@@ -6,7 +6,6 @@ import {
   BriefcaseBusiness,
   ImageIcon,
   MapPin,
-  ShieldCheck,
   Star,
   UserRound,
 } from "lucide-react";
@@ -119,9 +118,6 @@ function ListingCardPreview({ profile }: { profile: TrainerProfileDraft }) {
         ) : (
           <PlaceholderTile icon={UserRound} />
         )}
-        <span className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full border border-emerald-400/40 bg-black/70 text-emerald-300 backdrop-blur">
-          <ShieldCheck aria-hidden="true" size={15} />
-        </span>
       </div>
 
       <div className="min-w-0 pt-0.5">
@@ -246,10 +242,6 @@ function ProfilePagePreview({ profile }: { profile: TrainerProfileDraft }) {
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-transparent to-transparent" />
 
         <div className="absolute inset-x-0 bottom-0 p-4">
-          <span className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2.5 py-1 text-[9px] font-extrabold uppercase text-emerald-300">
-            <ShieldCheck aria-hidden="true" size={12} />
-            Verified coach
-          </span>
           <h3 className="font-display text-[28px] font-black leading-none text-white">
             {name}
           </h3>

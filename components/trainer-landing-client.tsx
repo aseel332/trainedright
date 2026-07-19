@@ -192,7 +192,7 @@ export function TrainerLandingClient() {
             <span className="block text-brand-light">elevated.</span>
           </h1>
           <p className="reveal mt-6 max-w-xl text-[15px] font-medium leading-7 text-soft md:text-lg md:leading-8">
-            TrainedRight turns your results into a client magnet — a verified
+            TrainedRight turns your results into a client magnet — a standout
             profile, direct WhatsApp leads, and analytics that show your
             coaching business growing.
           </p>

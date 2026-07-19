@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { categoryIdsToSpecs, stateForCity } from "@/lib/search-categories";
+import { parseVideoLink } from "@/lib/media-links";
 import { createAdminSupabaseClient } from "@/lib/server/supabase-admin";
 import { parseProfileDraft, type TrainerProfileDraft } from "@/lib/trainer-profile";
 
@@ -254,9 +255,8 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
     // specialties stay searchable as `tags`.
     specialties: categoryIdsToSpecs(profile.searchCategories),
     tags: profile.specialties,
-    badges: ["verified"],
+    badges: [] as string[],
     testimonial: listingTestimonial,
-    is_verified: true,
     is_active: true,
     sort_rank: 0,
   };
@@ -305,15 +305,30 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
     supabase.from("trainer_transformations").delete().eq("trainer_id", trainerId),
   ]);
 
-  const mediaRows = profile.gallery
+  // Video links are converted to embeddable URLs + thumbnails and listed
+  // first, so the trainer's intro video is the featured slot in the gallery.
+  const videoRows = profile.videos
+    .map((item) => parseVideoLink(item.url))
+    .filter((parsed): parsed is NonNullable<typeof parsed> => parsed !== null)
+    .map((parsed, index) => ({
+      trainer_id: trainerId,
+      media_type: "video" as const,
+      url: parsed.embedUrl,
+      poster_url: parsed.thumbnailUrl || null,
+      sort_order: index + 1,
+    }));
+
+  const photoRows = profile.gallery
     .filter((item) => item.url)
     .map((item, index) => ({
       trainer_id: trainerId,
       media_type: "photo" as const,
       url: item.url,
-      poster_url: null,
-      sort_order: index + 1,
+      poster_url: null as string | null,
+      sort_order: videoRows.length + index + 1,
     }));
+
+  const mediaRows = [...videoRows, ...photoRows];
 
   const pricingRows = profile.plans.map((plan, index) => ({
     trainer_id: trainerId,

@@ -25,6 +25,12 @@ export type ProfileMediaItem = {
   name: string;
 };
 
+/** A pasted video link (Google Drive / YouTube / direct file). */
+export type ProfileVideoItem = {
+  id: string;
+  url: string;
+};
+
 /** What the listing card's quote line shows. */
 export type ListingBlurb = "description" | "review";
 
@@ -41,6 +47,8 @@ export type TrainerProfileDraft = {
   youtube: string;
   yearsExperience: string;
   clientsCount: string;
+  /** The membership plan chosen at go-live (see lib/subscription-plans). */
+  subscriptionPlan: string;
   specialties: string[];
   searchCategories: string[];
   avatarUrl: string;
@@ -48,6 +56,7 @@ export type TrainerProfileDraft = {
   /** Whether the listing card highlights the bio or a top client review. */
   listingBlurb: ListingBlurb;
   gallery: ProfileMediaItem[];
+  videos: ProfileVideoItem[];
   plans: ProfilePlan[];
   credentials: ProfileCredential[];
 };
@@ -65,12 +74,14 @@ export const emptyProfile: TrainerProfileDraft = {
   youtube: "",
   yearsExperience: "",
   clientsCount: "",
+  subscriptionPlan: "",
   specialties: [],
   searchCategories: [],
   avatarUrl: "",
   coverUrl: "",
   listingBlurb: "description",
   gallery: [],
+  videos: [],
   plans: [],
   credentials: [],
 };
@@ -99,6 +110,23 @@ function galleryOf(value: unknown): ProfileMediaItem[] {
       id: stringOf(item.id) || crypto.randomUUID(),
       url: stringOf(item.url),
       name: stringOf(item.name),
+    }))
+    .filter((item) => item.url.length > 0);
+}
+
+function videosOf(value: unknown): ProfileVideoItem[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(
+      (item): item is Record<string, unknown> =>
+        typeof item === "object" && item !== null,
+    )
+    .map((item) => ({
+      id: stringOf(item.id) || crypto.randomUUID(),
+      url: stringOf(item.url),
     }))
     .filter((item) => item.url.length > 0);
 }
@@ -172,12 +200,14 @@ export function parseProfileDraft(value: unknown): TrainerProfileDraft {
     youtube: stringOf(raw.youtube),
     yearsExperience: stringOf(raw.yearsExperience),
     clientsCount: stringOf(raw.clientsCount),
+    subscriptionPlan: stringOf(raw.subscriptionPlan),
     specialties: stringArrayOf(raw.specialties).slice(0, MAX_SPECIALTIES),
     searchCategories: stringArrayOf(raw.searchCategories),
     avatarUrl: stringOf(raw.avatarUrl),
     coverUrl: stringOf(raw.coverUrl),
     listingBlurb: raw.listingBlurb === "review" ? "review" : "description",
     gallery: galleryOf(raw.gallery),
+    videos: videosOf(raw.videos),
     plans: plansOf(raw.plans),
     credentials: credentialsOf(raw.credentials),
   };

@@ -53,7 +53,6 @@ type TrainerRow = {
   tags: string[] | null;
   badges: string[] | null;
   testimonial: string;
-  is_verified: boolean;
   sort_rank: number;
 };
 
@@ -136,7 +135,7 @@ type CredentialRow = {
   sort_order: number;
 };
 
-const badgeValues = new Set<TrainerBadge>(["award", "verified", "loved"]);
+const badgeValues = new Set<TrainerBadge>(["award", "loved"]);
 
 function stringArray(value: unknown): string[] {
   return Array.isArray(value)
@@ -180,7 +179,6 @@ function mapTrainer(row: TrainerRow): Trainer {
     tags: stringArray(row.tags),
     badges: badgeArray(row.badges),
     testimonial: row.testimonial,
-    isVerified: row.is_verified,
     sortRank: row.sort_rank,
   };
 }

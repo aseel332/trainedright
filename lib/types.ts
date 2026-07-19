@@ -1,4 +1,4 @@
-export type TrainerBadge = "award" | "verified" | "loved";
+export type TrainerBadge = "award" | "loved";
 
 export type Trainer = {
   id: string;
@@ -28,7 +28,6 @@ export type Trainer = {
   tags: string[];
   badges: TrainerBadge[];
   testimonial: string;
-  isVerified: boolean;
   sortRank: number;
 };
 

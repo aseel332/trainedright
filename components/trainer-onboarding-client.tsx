@@ -23,7 +23,9 @@ import {
   Loader2,
   MapPin,
   MessageCircle,
+  Play,
   Plus,
+  ShieldCheck,
   Sparkles,
   Star,
   Trash2,
@@ -31,10 +33,17 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { saveTrainerProfile } from "@/app/trainer/actions";
+import { saveTrainerProfile, submitForApproval } from "@/app/trainer/actions";
 import { TrainerProfilePreview } from "@/components/trainer-profile-preview";
+import { TrainerDetailPreview } from "@/components/trainer-detail-preview";
 import { SOCIAL_ICON } from "@/components/social-icons";
 import { SOCIAL_PLATFORMS } from "@/lib/socials";
+import { isValidVideoLink, parseVideoLink } from "@/lib/media-links";
+import {
+  hasPaidSubscriptionPlans,
+  subscriptionPlans,
+  type SubscriptionPlan,
+} from "@/lib/subscription-plans";
 import {
   cityOptions,
   searchCategories,
@@ -46,6 +55,7 @@ import {
   profileRequirements,
   type ProfileCredential,
   type ProfilePlan,
+  type ProfileRequirement,
   type TrainerProfileDraft,
 } from "@/lib/trainer-profile";
 import { uploadPublicFile } from "@/lib/client/upload";
@@ -87,7 +97,6 @@ const steps: StepDef[] = [
     kicker: "Where you coach",
     title: "Which city do you train in?",
     tip: "Clients search by city first. Your state is filled in automatically from the city you pick.",
-    optional: true,
   },
   {
     id: "storefront",
@@ -119,14 +128,14 @@ const steps: StepDef[] = [
     id: "credentials",
     kicker: "Your proof",
     title: "Add qualifications and awards.",
-    tip: "Upload the certificate or award itself (image or PDF) with the date. Verified documents earn the badge clients filter by.",
+    tip: "Upload the certificate or award itself (image or PDF) with the date. Real documents build trust with clients.",
     optional: true,
   },
   {
     id: "review",
-    kicker: "Final look",
-    title: "Ready to open your profile?",
-    tip: "Only the checked items are required — everything else can be added later from your dashboard.",
+    kicker: "Go live",
+    title: "This is your profile. Pick a plan to submit.",
+    tip: "Here's exactly how clients will see you. Choose a plan below to send your profile for approval — once approved, it goes live.",
   },
 ];
 
@@ -220,6 +229,8 @@ export function TrainerOnboardingClient({
     [],
   );
 
+  // Bulletproofing: every step up to and including contact must be complete
+  // before the trainer can move on — no skipping the essentials.
   function stepIsBlocked() {
     if (step.id === "welcome") {
       return profile.name.trim().length < 2;
@@ -227,8 +238,13 @@ export function TrainerOnboardingClient({
     if (step.id === "categories") {
       return profile.searchCategories.length === 0;
     }
+    if (step.id === "location") {
+      return profile.city.trim().length === 0;
+    }
     if (step.id === "storefront") {
-      return profile.specialties.length === 0;
+      return (
+        profile.specialties.length === 0 || profile.bio.trim().length < 80
+      );
     }
     if (step.id === "contact") {
       return profile.whatsapp.replace(/\D/g, "").length < 10;
@@ -251,15 +267,31 @@ export function TrainerOnboardingClient({
   }
 
   async function finish() {
+    if (!profile.subscriptionPlan) {
+      setError("Choose a plan to submit your profile.");
+      return;
+    }
+
     setFinishing(true);
     setError(null);
-    const result = await saveTrainerProfile(profile, {
+
+    // Complete onboarding (saves the profile) then submit it for approval —
+    // both must succeed before we send them to the dashboard.
+    const saved = await saveTrainerProfile(profile, {
       completeOnboarding: true,
     });
-
-    if (!result.ok) {
+    if (!saved.ok) {
       setFinishing(false);
-      setError(result.error ?? "Something went wrong. Please try again.");
+      setError(saved.error ?? "Something went wrong. Please try again.");
+      return;
+    }
+
+    const submitted = await submitForApproval();
+    if (!submitted.ok) {
+      setFinishing(false);
+      setError(
+        submitted.error ?? "Could not submit for approval. Please try again.",
+      );
       return;
     }
 
@@ -315,7 +347,11 @@ export function TrainerOnboardingClient({
 
       <section
         className={`mx-auto flex w-full flex-1 flex-col px-4 py-10 sm:px-6 ${
-          step.id === "storefront" ? "max-w-6xl" : "max-w-3xl"
+          step.id === "storefront"
+            ? "max-w-6xl"
+            : step.id === "review"
+              ? "max-w-5xl"
+              : "max-w-3xl"
         }`}
       >
         <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-brand-light">
@@ -538,32 +574,13 @@ export function TrainerOnboardingClient({
           ) : null}
 
           {step.id === "review" ? (
-            <div className="max-w-xl space-y-2">
-              {requirements.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 rounded-[14px] border border-white/10 bg-panel p-3.5"
-                >
-                  <span
-                    className={`grid h-8 w-8 flex-none place-items-center rounded-full ${
-                      item.done
-                        ? "bg-emerald-400 text-black"
-                        : "bg-white/10 text-muted"
-                    }`}
-                  >
-                    <Check aria-hidden="true" size={15} />
-                  </span>
-                  <span className="text-sm font-bold text-white">
-                    {item.label}
-                  </span>
-                </div>
-              ))}
-              <p className="pt-2 text-[12px] font-semibold leading-5 text-muted">
-                After submitting you&apos;ll land on your dashboard, where you can
-                track analytics, collect reviews, and keep polishing the
-                profile before it goes for approval.
-              </p>
-            </div>
+            <GoLiveStep
+              profile={profile}
+              requirements={requirements}
+              finishing={finishing}
+              onSelectPlan={(id) => update({ subscriptionPlan: id })}
+              onSubmit={finish}
+            />
           ) : null}
         </div>
 
@@ -594,7 +611,27 @@ export function TrainerOnboardingClient({
               Skip for now
             </button>
           ) : null}
-          {stepIndex < steps.length - 1 ? (
+          {step.id === "review" ? null : step.id === "contact" ? (
+            <>
+              <button
+                type="button"
+                disabled={stepIsBlocked()}
+                onClick={() => setStepIndex((index) => index + 1)}
+                className="inline-flex h-13 items-center rounded-[14px] border border-white/10 bg-panel px-5 py-3.5 text-sm font-extrabold text-white transition enabled:hover:border-white/25 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Keep building
+              </button>
+              <button
+                type="button"
+                disabled={stepIsBlocked()}
+                onClick={() => setStepIndex(steps.length - 1)}
+                className="inline-flex h-13 items-center gap-2 rounded-[14px] bg-brand px-6 py-3.5 text-sm font-extrabold text-white transition enabled:hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-muted"
+              >
+                Submit for approval
+                <ArrowRight aria-hidden="true" size={16} />
+              </button>
+            </>
+          ) : (
             <button
               type="button"
               disabled={stepIsBlocked()}
@@ -603,18 +640,6 @@ export function TrainerOnboardingClient({
             >
               Continue
               <ArrowRight aria-hidden="true" size={16} />
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={finishing || requirements.some((item) => !item.done)}
-              onClick={finish}
-              className="inline-flex h-13 items-center gap-2 rounded-[14px] bg-brand px-6 py-3.5 text-sm font-extrabold text-white transition enabled:hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-muted"
-            >
-              {finishing ? (
-                <Loader2 aria-hidden="true" size={16} className="animate-spin" />
-              ) : null}
-              Submit profile
             </button>
           )}
         </div>
@@ -931,6 +956,185 @@ function BlurbOption({
   );
 }
 
+function GoLiveStep({
+  profile,
+  requirements,
+  finishing,
+  onSelectPlan,
+  onSubmit,
+}: {
+  profile: TrainerProfileDraft;
+  requirements: ProfileRequirement[];
+  finishing: boolean;
+  onSelectPlan: (id: string) => void;
+  onSubmit: () => void;
+}) {
+  const incomplete = requirements.filter((item) => !item.done);
+  const ready = incomplete.length === 0 && Boolean(profile.subscriptionPlan);
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.14em] text-brand-light">
+          Your live profile preview
+        </p>
+        <TrainerDetailPreview profile={profile} />
+      </div>
+
+      {incomplete.length > 0 ? (
+        <div className="rounded-[16px] border border-amber-400/30 bg-amber-500/10 p-4">
+          <p className="text-[13px] font-extrabold text-amber-200">
+            Finish these before you can submit:
+          </p>
+          <ul className="mt-2 space-y-1">
+            {incomplete.map((item) => (
+              <li
+                key={item.id}
+                className="text-[13px] font-semibold text-amber-100/90"
+              >
+                • {item.label}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div>
+        <h2 className="font-display text-[24px] font-black text-white">
+          Choose your plan to go live
+        </h2>
+        <p className="mt-1 text-[13px] font-semibold text-muted">
+          Select a plan to send your profile for approval. Once approved, it
+          goes live for clients.
+        </p>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {subscriptionPlans.map((plan) => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              selected={profile.subscriptionPlan === plan.id}
+              onSelect={() => onSelectPlan(plan.id)}
+            />
+          ))}
+          {!hasPaidSubscriptionPlans ? <ContactPlanCard /> : null}
+        </div>
+      </div>
+
+      <div className="border-t border-white/10 pt-6">
+        <button
+          type="button"
+          disabled={!ready || finishing}
+          onClick={onSubmit}
+          className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-[15px] bg-brand px-6 text-sm font-extrabold text-white transition enabled:hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-muted sm:w-auto sm:min-w-[300px]"
+        >
+          {finishing ? (
+            <Loader2 aria-hidden="true" size={18} className="animate-spin" />
+          ) : (
+            <ShieldCheck aria-hidden="true" size={18} />
+          )}
+          Submit for approval &amp; go live
+        </button>
+        <p className="mt-3 text-[12px] font-semibold text-muted">
+          {incomplete.length > 0
+            ? "Complete the required fields above to submit."
+            : !profile.subscriptionPlan
+              ? "Select a plan above to submit."
+              : "You'll land on your dashboard after submitting."}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function PlanCard({
+  plan,
+  selected,
+  onSelect,
+}: {
+  plan: SubscriptionPlan;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`relative flex flex-col rounded-[18px] border p-5 text-left transition ${
+        selected
+          ? "border-brand bg-brand/10"
+          : "border-white/10 bg-panel hover:border-white/25"
+      }`}
+    >
+      {plan.recommended ? (
+        <span className="absolute right-4 top-4 rounded-full bg-brand px-2.5 py-1 text-[9px] font-extrabold uppercase text-white">
+          Recommended
+        </span>
+      ) : null}
+      <div className="flex items-baseline gap-2">
+        <span className="font-display text-[24px] font-black text-white">
+          {plan.price}
+        </span>
+        <span className="text-[12px] font-semibold text-muted">
+          {plan.cadence}
+        </span>
+      </div>
+      <p className="mt-1 text-[15px] font-extrabold text-white">{plan.name}</p>
+      <p className="mt-1 text-[12px] font-medium leading-5 text-muted">
+        {plan.description}
+      </p>
+      <ul className="mt-4 space-y-2">
+        {plan.features.map((feature) => (
+          <li
+            key={feature}
+            className="flex items-start gap-2 text-[12.5px] font-semibold text-soft"
+          >
+            <Check
+              aria-hidden="true"
+              size={15}
+              className="mt-0.5 flex-none text-brand-light"
+            />
+            {feature}
+          </li>
+        ))}
+      </ul>
+      <span
+        className={`mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-[12px] text-[13px] font-extrabold transition ${
+          selected
+            ? "bg-brand text-white"
+            : "border border-white/15 text-white"
+        }`}
+      >
+        {selected ? (
+          <>
+            <Check aria-hidden="true" size={15} />
+            Selected
+          </>
+        ) : (
+          "Select this plan"
+        )}
+      </span>
+    </button>
+  );
+}
+
+function ContactPlanCard() {
+  return (
+    <div className="flex flex-col rounded-[18px] border border-dashed border-white/15 bg-panel/50 p-5">
+      <p className="font-display text-[18px] font-black text-white">
+        Paid plans
+      </p>
+      <p className="mt-1 text-[12px] font-medium leading-5 text-muted">
+        Custom and paid membership tiers are coming soon. For anything beyond
+        the free trial, reach out and we&apos;ll sort it for you.
+      </p>
+      <div className="mt-auto flex items-center gap-2 pt-4 text-[13px] font-extrabold text-brand-light">
+        <MessageCircle aria-hidden="true" size={15} />
+        Contact for details
+      </div>
+    </div>
+  );
+}
+
 export function SpecialtiesEditor({
   specialties,
   onChange,
@@ -1062,6 +1266,30 @@ export function PhotosEditor({
   showSingles?: boolean;
 }) {
   const [uploading, setUploading] = useState(false);
+  const [videoInput, setVideoInput] = useState("");
+  const [videoError, setVideoError] = useState<string | null>(null);
+
+  function addVideo() {
+    const url = videoInput.trim();
+    if (!url) {
+      return;
+    }
+    if (!isValidVideoLink(url)) {
+      setVideoError("Paste a Google Drive, YouTube, or direct video link.");
+      return;
+    }
+    if (!profile.videos.some((video) => video.url === url)) {
+      update({
+        videos: [...profile.videos, { id: crypto.randomUUID(), url }],
+      });
+    }
+    setVideoInput("");
+    setVideoError(null);
+  }
+
+  function removeVideo(id: string) {
+    update({ videos: profile.videos.filter((video) => video.id !== id) });
+  }
 
   async function uploadSingle(
     files: FileList | null,
@@ -1179,6 +1407,104 @@ export function PhotosEditor({
             </p>
           </div>
         )}
+      </div>
+
+      <div>
+        <p className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
+          Video links
+        </p>
+        <p className="mb-3 text-[12px] font-medium leading-5 text-muted">
+          Paste a Google Drive or YouTube link — it plays in the media section
+          of your profile. Add as many as you like.
+        </p>
+        <div className="flex gap-2">
+          <input
+            value={videoInput}
+            onChange={(event) => {
+              setVideoInput(event.target.value);
+              setVideoError(null);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                addVideo();
+              }
+            }}
+            placeholder="https://drive.google.com/file/d/…"
+            className="h-[52px] w-full rounded-[14px] border border-white/10 bg-panel px-4 text-[14px] font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand"
+          />
+          <button
+            type="button"
+            onClick={addVideo}
+            disabled={!videoInput.trim()}
+            aria-label="Add video link"
+            className="grid h-[52px] w-[52px] flex-none place-items-center rounded-[14px] bg-brand text-white transition enabled:hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-muted"
+          >
+            <Plus aria-hidden="true" size={20} />
+          </button>
+        </div>
+        {videoError ? (
+          <p className="mt-2 text-[12px] font-semibold text-brand-light">
+            {videoError}
+          </p>
+        ) : null}
+
+        {profile.videos.length > 0 ? (
+          <div className="mt-3 space-y-2">
+            {profile.videos.map((video) => {
+              const parsed = parseVideoLink(video.url);
+              const providerLabel =
+                parsed?.provider === "drive"
+                  ? "Google Drive video"
+                  : parsed?.provider === "youtube"
+                    ? "YouTube video"
+                    : parsed
+                      ? "Video"
+                      : "Unrecognized link";
+              return (
+                <div
+                  key={video.id}
+                  className="flex items-center gap-3 rounded-[14px] border border-white/10 bg-panel p-2.5"
+                >
+                  <span className="relative grid h-12 w-16 flex-none place-items-center overflow-hidden rounded-[10px] bg-black">
+                    {parsed?.thumbnailUrl ? (
+                      <Image
+                        src={parsed.thumbnailUrl}
+                        alt=""
+                        fill
+                        unoptimized
+                        className="object-cover opacity-80"
+                        sizes="64px"
+                      />
+                    ) : null}
+                    <Play
+                      aria-hidden="true"
+                      size={16}
+                      className="relative text-white"
+                      fill="currentColor"
+                    />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[12px] font-bold text-white">
+                      {providerLabel}
+                    </span>
+                    <span className="block truncate text-[11px] font-medium text-muted">
+                      {video.url}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Remove video"
+                    onClick={() => removeVideo(video.id)}
+                    className="grid h-8 w-8 flex-none place-items-center rounded-full bg-white/5 text-muted transition hover:bg-brand hover:text-white"
+                  >
+                    <X aria-hidden="true" size={14} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
 
       {uploading ? (

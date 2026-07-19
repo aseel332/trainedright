@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  BadgeCheck,
   Loader2,
   Lock,
   LogIn,
@@ -485,26 +484,20 @@ export function TrainerAuthClient({
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/20" />
         <div className="absolute inset-x-0 bottom-0 p-10">
           <div className="rounded-[20px] border border-white/15 bg-black/55 p-5 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-1">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <Star
-                    key={index}
-                    aria-hidden="true"
-                    size={14}
-                    className="fill-brand text-brand"
-                  />
-                ))}
-              </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-extrabold uppercase text-emerald-300">
-                <BadgeCheck aria-hidden="true" size={12} />
-                Verified coach
-              </span>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <Star
+                  key={index}
+                  aria-hidden="true"
+                  size={14}
+                  className="fill-brand text-brand"
+                />
+              ))}
             </div>
             <p className="mt-3 text-[14px] font-medium leading-6 text-white">
-              Build a profile that sells your coaching: verified client
-              reviews, before/after proof, and your own prices — with leads
-              landing straight in your WhatsApp.
+              Build a profile that sells your coaching: client reviews,
+              before/after proof, and your own prices — with leads landing
+              straight in your WhatsApp.
             </p>
           </div>
           <p className="mt-5 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-white/50">

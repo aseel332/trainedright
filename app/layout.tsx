@@ -16,7 +16,7 @@ const archivo = Archivo({
 
 export const metadata: Metadata = {
   title: "TrainedRight",
-  description: "Find verified trainers, coaches, and transformation stories.",
+  description: "Find trainers, coaches, and transformation stories.",
 };
 
 export default function RootLayout({

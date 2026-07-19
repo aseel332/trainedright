@@ -220,12 +220,7 @@ function ProfileHero({ trainer }: { trainer: TrainerProfile }) {
 
       <div className="relative mx-auto flex min-h-[415px] max-w-7xl items-end px-4 pb-8 sm:px-6 lg:min-h-[510px] lg:px-8 lg:pb-12">
         <div className="max-w-3xl">
-          {trainer.isVerified ? (
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1.5 text-[11px] font-extrabold uppercase text-emerald-300">
-              <ShieldCheck aria-hidden="true" size={14} />
-              Verified coach
-            </div>
-          ) : primaryBadge ? (
+          {primaryBadge ? (
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/45 px-3 py-1.5 text-[11px] font-extrabold uppercase text-white">
               <BadgeIcon badge={primaryBadge} />
               Coach profile

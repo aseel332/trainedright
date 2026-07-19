@@ -59,19 +59,16 @@ const priceOptions = [
 export function TrainerListingClient({
   trainers,
   initialQuery = "",
-  initialVerified = false,
   initialCity = "",
   initialCategory = "",
 }: {
   trainers: Trainer[];
   initialQuery?: string;
-  initialVerified?: boolean;
   initialCity?: string;
   initialCategory?: string;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [sort, setSort] = useState<TrainerSort>("recommended");
-  const [verified, setVerified] = useState(initialVerified);
   const [specs, setSpecs] = useState<string[]>(() =>
     initialCategory ? categoryIdsToSpecs([initialCategory]) : [],
   );
@@ -141,11 +138,10 @@ export function TrainerListingClient({
         query,
         city,
         sort,
-        verified,
         specs,
         maxPrice,
       }),
-    [city, maxPrice, query, sort, specs, trainers, verified],
+    [city, maxPrice, query, sort, specs, trainers],
   );
 
   const activeGoalLabel = useMemo(
@@ -153,7 +149,7 @@ export function TrainerListingClient({
     [selectedGoals],
   );
 
-  const filterCount = (verified ? 1 : 0) + specs.length + (maxPrice ? 1 : 0);
+  const filterCount = specs.length + (maxPrice ? 1 : 0);
 
   const cityLabel = city || "All cities";
 
@@ -168,7 +164,6 @@ export function TrainerListingClient({
   // A full reset clears everything — including goal-applied specialty
   // filters — so nobody gets stuck inside a stored goal.
   function clearFilters() {
-    setVerified(false);
     setSpecs([]);
     setMaxPrice(0);
     setSelectedGoals([]);
@@ -211,7 +206,6 @@ export function TrainerListingClient({
       specialities={specialities}
       specs={specs}
       maxPrice={maxPrice}
-      verified={verified}
       selectedGoals={selectedGoals}
       onToggleGoal={(goalId) => {
         const nextGoals = selectedGoals.includes(goalId)
@@ -220,7 +214,6 @@ export function TrainerListingClient({
         saveGoals(nextGoals);
       }}
       onToggleSpec={toggleSpec}
-      onToggleVerified={() => setVerified((value) => !value)}
       onPrice={setMaxPrice}
       onClear={clearFilters}
     />
@@ -385,18 +378,13 @@ export function TrainerListingClient({
                 ) : null}
               </button>
 
-              {["Verified", ...specialities.slice(0, 5)].map((chip) => {
-                const isVerifiedChip = chip === "Verified";
-                const active = isVerifiedChip ? verified : specs.includes(chip);
+              {specialities.slice(0, 6).map((chip) => {
+                const active = specs.includes(chip);
                 return (
                   <button
                     type="button"
                     key={chip}
-                    onClick={() =>
-                      isVerifiedChip
-                        ? setVerified((value) => !value)
-                        : toggleSpec(chip)
-                    }
+                    onClick={() => toggleSpec(chip)}
                     className={`h-10 flex-none rounded-full border px-3.5 text-[12px] font-extrabold transition ${
                       active
                         ? "border-brand bg-brand text-white"
@@ -549,22 +537,18 @@ function FilterPanel({
   specialities,
   specs,
   maxPrice,
-  verified,
   selectedGoals,
   onToggleGoal,
   onToggleSpec,
-  onToggleVerified,
   onPrice,
   onClear,
 }: {
   specialities: string[];
   specs: string[];
   maxPrice: number;
-  verified: boolean;
   selectedGoals: string[];
   onToggleGoal: (goalId: string) => void;
   onToggleSpec: (spec: string) => void;
-  onToggleVerified: () => void;
   onPrice: (price: number) => void;
   onClear: () => void;
 }) {
@@ -675,34 +659,6 @@ function FilterPanel({
           ))}
         </div>
       </div>
-
-      <button
-        type="button"
-        onClick={onToggleVerified}
-        className={`flex w-full items-center justify-between gap-4 rounded-[14px] border p-4 text-left transition ${
-          verified ? "border-brand/60 bg-brand/10" : "border-white/10 bg-panel"
-        }`}
-      >
-        <span>
-          <span className="block text-sm font-extrabold text-white">
-            Verified coaches only
-          </span>
-          <span className="mt-1 block text-[12px] font-medium text-muted">
-            Certified or ID-verified profiles
-          </span>
-        </span>
-        <span
-          className={`relative h-[26px] w-11 rounded-full transition ${
-            verified ? "bg-brand" : "bg-white/20"
-          }`}
-        >
-          <span
-            className={`absolute top-[3px] h-5 w-5 rounded-full bg-white transition ${
-              verified ? "left-[21px]" : "left-[3px]"
-            }`}
-          />
-        </span>
-      </button>
     </div>
   );
 }

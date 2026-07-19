@@ -6,7 +6,6 @@ import {
   CalendarCheck,
   MessageCircle,
   Search,
-  ShieldCheck,
   Star,
   TrendingUp,
 } from "lucide-react";
@@ -64,8 +63,8 @@ export default async function Home() {
         <div className="relative mx-auto w-full max-w-7xl px-4 pb-14 pt-14 sm:px-6 lg:px-8 lg:pb-24 lg:pt-24">
           <div className="max-w-3xl">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-soft backdrop-blur">
-              <ShieldCheck aria-hidden="true" size={14} className="text-brand-light" />
-              Verified coaches only
+              <Star aria-hidden="true" size={14} className="fill-brand text-brand" />
+              Coaches proven by clients
             </span>
             <h1 className="mt-5 font-display text-[46px] font-black leading-[0.95] sm:text-[64px] lg:text-[84px]">
               Find a coach who&apos;s
@@ -290,12 +289,6 @@ export default async function Home() {
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-soft">
             <Link href="/trainers" className="transition hover:text-white">
               Find coaches
-            </Link>
-            <Link
-              href="/trainers?verified=true"
-              className="transition hover:text-white"
-            >
-              Verified coaches
             </Link>
             <Link href="/trainer" className="transition hover:text-white">
               For trainers
