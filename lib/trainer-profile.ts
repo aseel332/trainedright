@@ -44,9 +44,10 @@ export type StoryMedia = {
   url: string;
 };
 
-/** One section of a story: a block of text with an optional image or video. */
+/** One section of a story: a heading and text, with an optional image or video. */
 export type ProfileStorySection = {
   id: string;
+  title: string;
   media: StoryMedia;
   text: string;
 };
@@ -75,7 +76,7 @@ export function emptyStory(): ProfileStory {
 }
 
 export function emptyStorySection(): ProfileStorySection {
-  return { id: crypto.randomUUID(), media: emptyStoryMedia(), text: "" };
+  return { id: crypto.randomUUID(), title: "", media: emptyStoryMedia(), text: "" };
 }
 
 /** What the listing card's quote line shows. */
@@ -204,6 +205,7 @@ function storySectionsOf(value: unknown): ProfileStorySection[] {
     )
     .map((item) => ({
       id: stringOf(item.id) || crypto.randomUUID(),
+      title: stringOf(item.title),
       media: storyMediaOf(item.media),
       text: stringOf(item.text),
     }));

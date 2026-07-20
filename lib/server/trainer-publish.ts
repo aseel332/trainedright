@@ -440,11 +440,12 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
       const sections = story.sections
         .map((section) => ({
           id: section.id,
+          title: section.title,
           text: section.text,
           media: publishStoryMedia(section.media),
         }))
-        // Drop sections that ended up with neither text nor a usable media slot.
-        .filter((section) => section.text.trim() || section.media);
+        // Drop sections with no heading, text, or usable media slot at all.
+        .filter((section) => section.title.trim() || section.text.trim() || section.media);
 
       const sectionImage = sections.find(
         (section) => section.media?.kind === "image",
@@ -464,7 +465,9 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
         trainer_id: trainerId,
         title: story.title.trim(),
         author_name: name,
-        excerpt: storyExcerpt(story.intro || sections[0]?.text || ""),
+        excerpt: storyExcerpt(
+          story.intro || sections[0]?.text || sections[0]?.title || "",
+        ),
         image_url: cardImage,
         avatar_url: avatarUrl,
         is_featured: false,

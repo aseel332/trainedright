@@ -40,9 +40,10 @@ export type StoryMedia = {
   posterUrl: string;
 };
 
-/** One published section of a story: text with an optional image or video. */
+/** One published section of a story: a heading + text with optional media. */
 export type StorySection = {
   id: string;
+  title: string;
   text: string;
   media: StoryMedia | null;
 };

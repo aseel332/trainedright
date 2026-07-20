@@ -375,6 +375,16 @@ function StoryEditorCard({
                     </div>
                   </div>
 
+                  <input
+                    value={section.title}
+                    onChange={(event) =>
+                      patchSection(section.id, { title: event.target.value })
+                    }
+                    placeholder="Section heading (e.g. Week one: honest numbers)"
+                    maxLength={120}
+                    className="mb-3 h-12 w-full rounded-[12px] border border-white/10 bg-black/25 px-3.5 text-[15px] font-extrabold text-white outline-none transition placeholder:font-semibold placeholder:text-muted focus:border-brand"
+                  />
+
                   <StoryMediaField
                     media={section.media}
                     userId={userId}

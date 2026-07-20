@@ -218,10 +218,16 @@ function storySectionsOf(value: unknown): StorySection[] {
     )
     .map((item) => ({
       id: typeof item.id === "string" && item.id ? item.id : crypto.randomUUID(),
+      title: typeof item.title === "string" ? item.title : "",
       text: typeof item.text === "string" ? item.text : "",
       media: storyMediaOf(item.media),
     }))
-    .filter((section) => section.text.trim().length > 0 || section.media !== null);
+    .filter(
+      (section) =>
+        section.title.trim().length > 0 ||
+        section.text.trim().length > 0 ||
+        section.media !== null,
+    );
 }
 
 function mapStory(row: StoryRow): Story {

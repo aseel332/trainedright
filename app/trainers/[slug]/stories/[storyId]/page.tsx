@@ -122,17 +122,34 @@ export default async function StoryDetailPage({ params }: StoryPageProps) {
         <div className="mt-2">
           {story.sections.map((section, index) => {
             const media = section.media;
+            const title = section.title.trim() ? section.title : "";
             const text = section.text.trim() ? section.text : "";
+            const hasBody = Boolean(title || text);
             const proseClass = "text-[16px] leading-8 text-soft sm:text-[17px]";
 
-            // Image and text side by side on desktop, alternating sides; on
+            const body = hasBody ? (
+              <div className="space-y-3">
+                {title ? (
+                  <h2 className="font-display text-[22px] font-black leading-tight text-white sm:text-[26px]">
+                    {title}
+                  </h2>
+                ) : null}
+                {text ? (
+                  <StoryProse text={text} className={proseClass} />
+                ) : null}
+              </div>
+            ) : null;
+
+            // Media and body side by side on desktop, alternating sides; on
             // phones they stack with the image on top. Alternation counts only
-            // the sections that actually have both, so they always zig-zag.
-            if (media && text) {
+            // the sections that pair media with a heading/text, so they zig-zag.
+            if (media && hasBody) {
               const imageRight =
                 story.sections
                   .slice(0, index)
-                  .filter((s) => s.media && s.text.trim()).length %
+                  .filter(
+                    (s) => s.media && (s.title.trim() || s.text.trim()),
+                  ).length %
                   2 ===
                 1;
 
@@ -147,7 +164,7 @@ export default async function StoryDetailPage({ params }: StoryPageProps) {
                       />
                     </div>
                     <div className={imageRight ? "md:order-1" : "md:order-2"}>
-                      <StoryProse text={text} className={proseClass} />
+                      {body}
                     </div>
                   </div>
                 </section>
@@ -166,10 +183,10 @@ export default async function StoryDetailPage({ params }: StoryPageProps) {
               );
             }
 
-            if (text) {
+            if (hasBody) {
               return (
                 <section key={section.id} className="mx-auto mt-10 max-w-3xl">
-                  <StoryProse text={text} className={proseClass} />
+                  {body}
                 </section>
               );
             }
