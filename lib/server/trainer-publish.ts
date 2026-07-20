@@ -4,7 +4,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { categoryIdsToSpecs, stateForCity } from "@/lib/search-categories";
 import { parseVideoLink } from "@/lib/media-links";
 import { createAdminSupabaseClient } from "@/lib/server/supabase-admin";
-import { parseProfileDraft, type TrainerProfileDraft } from "@/lib/trainer-profile";
+import {
+  parseProfileDraft,
+  type StoryMedia,
+  type TrainerProfileDraft,
+} from "@/lib/trainer-profile";
 
 /**
  * Copies a trainer's self-serve profile (trainer_accounts.profile jsonb) into
@@ -98,6 +102,40 @@ function priceFrom(profile: TrainerProfileDraft) {
     .filter((price): price is number => typeof price === "number" && price > 0);
 
   return prices.length > 0 ? Math.round(Math.min(...prices)) : 0;
+}
+
+type PublishedStoryMedia = {
+  kind: "image" | "video";
+  url: string;
+  posterUrl: string;
+};
+
+/**
+ * Resolve a draft story slot into what the public page renders: an uploaded
+ * image URL, or a pasted video link turned into an embeddable URL + thumbnail.
+ * Returns null for an empty or unusable slot.
+ */
+function publishStoryMedia(media: StoryMedia): PublishedStoryMedia | null {
+  const url = media.url.trim();
+
+  if (!url) {
+    return null;
+  }
+
+  if (media.kind === "video") {
+    const parsed = parseVideoLink(url);
+    return parsed
+      ? { kind: "video", url: parsed.embedUrl, posterUrl: parsed.thumbnailUrl }
+      : null;
+  }
+
+  return /^https?:\/\//i.test(url) ? { kind: "image", url, posterUrl: "" } : null;
+}
+
+/** A short, single-line summary for the story card. */
+function storyExcerpt(text: string) {
+  const clean = text.replace(/\s+/g, " ").trim();
+  return clean.length > 200 ? `${clean.slice(0, 197).trimEnd()}…` : clean;
 }
 
 /**
@@ -303,6 +341,7 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
     supabase.from("trainer_credentials").delete().eq("trainer_id", trainerId),
     supabase.from("trainer_reviews").delete().eq("trainer_id", trainerId),
     supabase.from("trainer_transformations").delete().eq("trainer_id", trainerId),
+    supabase.from("stories").delete().eq("trainer_id", trainerId),
   ]);
 
   // Video links are converted to embeddable URLs + thumbnails and listed
@@ -393,6 +432,73 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
       };
     });
 
+  const storyRows = profile.stories
+    // A titleless story is still a draft; don't publish it.
+    .filter((story) => story.title.trim())
+    .map((story, index) => {
+      const cover = publishStoryMedia(story.cover);
+      const sections = story.sections
+        .map((section) => ({
+          id: section.id,
+          text: section.text,
+          media: publishStoryMedia(section.media),
+        }))
+        // Drop sections that ended up with neither text nor a usable media slot.
+        .filter((section) => section.text.trim() || section.media);
+
+      const sectionImage = sections.find(
+        (section) => section.media?.kind === "image",
+      )?.media?.url;
+
+      // image_url is NOT NULL and drives the card thumbnail. Prefer the cover
+      // image, then a cover video's thumbnail, then a section image, then the
+      // trainer's avatar.
+      const cardImage =
+        (cover?.kind === "image" ? cover.url : "") ||
+        cover?.posterUrl ||
+        sectionImage ||
+        avatarUrl;
+
+      return {
+        id: story.id,
+        trainer_id: trainerId,
+        title: story.title.trim(),
+        author_name: name,
+        excerpt: storyExcerpt(story.intro || sections[0]?.text || ""),
+        image_url: cardImage,
+        avatar_url: avatarUrl,
+        is_featured: false,
+        is_active: true,
+        sort_order: index + 1,
+        content: { intro: story.intro, cover, sections },
+      };
+    });
+
+  async function insertStories(db: SupabaseClient) {
+    if (storyRows.length === 0) {
+      return null;
+    }
+
+    // Drop `content` and retry if the jsonb column isn't there yet, so the card
+    // still publishes before the story-content migration is applied.
+    const rows: Record<string, unknown>[] = storyRows.map((row) => ({ ...row }));
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const result = await db.from("stories").insert(rows);
+      const missing = result.error?.message.match(
+        /could not find the '([^']+)' column/i,
+      );
+      const column = missing?.[1];
+      if (column && rows.every((row) => column in row)) {
+        for (const row of rows) {
+          delete row[column];
+        }
+        continue;
+      }
+      return result;
+    }
+    return db.from("stories").insert(rows);
+  }
+
   async function insertTransformations(db: SupabaseClient) {
     if (transformationRows.length === 0) {
       return null;
@@ -425,6 +531,7 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
       : null,
     reviewRows.length ? supabase.from("trainer_reviews").insert(reviewRows) : null,
     insertTransformations(supabase),
+    insertStories(supabase),
   ]);
 
   const failed = inserts.find((result) => result?.error);

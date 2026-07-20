@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { TrainerProfileDraft } from "@/lib/trainer-profile";
+import type { ProfileStory, TrainerProfileDraft } from "@/lib/trainer-profile";
 
 export const TRAINER_BUCKET = "trainer-uploads";
 
@@ -22,6 +22,18 @@ export function storagePathFromPublicUrl(url: string): string | null {
   return path ? decodeURIComponent(path) : null;
 }
 
+/**
+ * Every uploaded image a story points at (cover + section media). Video slots
+ * hold pasted links rather than storage uploads, so — like the gallery's video
+ * links — they are not tracked as files here.
+ */
+export function storyImageUrls(stories: ProfileStory[]): string[] {
+  return stories
+    .flatMap((story) => [story.cover, ...story.sections.map((s) => s.media)])
+    .filter((media) => media.kind === "image")
+    .map((media) => media.url);
+}
+
 /** Every uploaded file a profile currently points at. */
 export function profileFileUrls(profile: TrainerProfileDraft): string[] {
   return [
@@ -29,6 +41,7 @@ export function profileFileUrls(profile: TrainerProfileDraft): string[] {
     profile.coverUrl,
     ...profile.gallery.map((item) => item.url),
     ...profile.credentials.map((credential) => credential.fileUrl),
+    ...storyImageUrls(profile.stories),
   ].filter((url) => url.length > 0);
 }
 
@@ -156,6 +169,40 @@ export async function sweepTrainerUploads(
     }
   } catch {
     // Cleanup is best effort; never fail a save over it.
+  }
+}
+
+/**
+ * Remove client-submitted uploads (the `submissions/` folder) that a set of
+ * public URLs points at. Client transformation submissions land there rather
+ * than in a trainer's own folder, so neither the per-trainer sweep nor the
+ * delete-folder path reaches them — without this they leak forever.
+ *
+ * Restricted to the `submissions/` prefix so it can only ever delete anonymous
+ * submission uploads, never a trainer's own gallery/avatar files.
+ */
+export async function deleteSubmissionUploads(
+  supabase: SupabaseClient,
+  urls: string[],
+) {
+  const paths = Array.from(
+    new Set(
+      urls
+        .filter((url): url is string => typeof url === "string" && url.length > 0)
+        .map(storagePathFromPublicUrl)
+        .filter((path): path is string => path !== null)
+        .filter((path) => path.startsWith("submissions/")),
+    ),
+  );
+
+  if (paths.length === 0) {
+    return;
+  }
+
+  try {
+    await supabase.storage.from(TRAINER_BUCKET).remove(paths);
+  } catch {
+    // Best effort; never fail the caller over a storage cleanup.
   }
 }
 

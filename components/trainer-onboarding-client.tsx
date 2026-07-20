@@ -728,7 +728,11 @@ export function StorefrontEditor({
     }
     setUploading(true);
     const result = await uploadPublicFile(file, userId);
-    update({ [key]: result.url } as Partial<TrainerProfileDraft>);
+    // Only store a URL that actually persisted; a failed upload returns a
+    // tab-local blob: preview that must not be saved.
+    if (result.persisted) {
+      update({ [key]: result.url } as Partial<TrainerProfileDraft>);
+    }
     setUploading(false);
   }
 
@@ -1301,7 +1305,11 @@ export function PhotosEditor({
     }
     setUploading(true);
     const result = await uploadPublicFile(file, userId);
-    update({ [key]: result.url } as Partial<TrainerProfileDraft>);
+    // Only store a URL that actually persisted; a failed upload returns a
+    // tab-local blob: preview that must not be saved.
+    if (result.persisted) {
+      update({ [key]: result.url } as Partial<TrainerProfileDraft>);
+    }
     setUploading(false);
   }
 
@@ -1311,12 +1319,22 @@ export function PhotosEditor({
       return;
     }
     setUploading(true);
-    const uploaded = await Promise.all(
-      assets.map(async (file) => {
-        const result = await uploadPublicFile(file, userId);
-        return { id: crypto.randomUUID(), url: result.url, name: file.name };
-      }),
-    );
+    const uploaded = (
+      await Promise.all(
+        assets.map(async (file) => {
+          const result = await uploadPublicFile(file, userId);
+          return { result, name: file.name };
+        }),
+      )
+    )
+      // Drop any failed upload (tab-local blob: preview) so only persisted
+      // images enter the gallery.
+      .filter(({ result }) => result.persisted)
+      .map(({ result, name }) => ({
+        id: crypto.randomUUID(),
+        url: result.url,
+        name,
+      }));
     update({ gallery: [...profile.gallery, ...uploaded] });
     setUploading(false);
   }
@@ -1756,6 +1774,7 @@ export function CredentialsEditor({
   const [fileUrl, setFileUrl] = useState("");
   const [fileType, setFileType] = useState<"image" | "pdf" | "">("");
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   async function uploadDocument(files: FileList | null) {
     const file = files?.[0];
@@ -1768,7 +1787,15 @@ export function CredentialsEditor({
       return;
     }
     setUploading(true);
+    setUploadError(null);
     const result = await uploadPublicFile(file, userId);
+    // A failed upload returns a tab-local blob: preview that must not be
+    // stored; keep the field empty and tell the trainer to retry.
+    if (!result.persisted) {
+      setUploadError("That document couldn't be uploaded. Please try again.");
+      setUploading(false);
+      return;
+    }
     setFileUrl(result.url);
     setFileType(isPdf ? "pdf" : "image");
     setUploading(false);
@@ -1896,6 +1923,9 @@ export function CredentialsEditor({
             </span>
           ) : null}
         </div>
+        {uploadError ? (
+          <p className="mt-2 text-[12px] font-semibold text-brand">{uploadError}</p>
+        ) : null}
         <button
           type="button"
           onClick={addCredential}

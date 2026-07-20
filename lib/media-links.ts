@@ -93,6 +93,18 @@ export function isValidVideoLink(raw: string): boolean {
 }
 
 /**
+ * True when Next's image optimizer is allowed to fetch this URL — it must match
+ * a host in next.config `images.remotePatterns`. Video thumbnails (Google Drive,
+ * YouTube) and other off-allowlist hosts must render with `unoptimized`.
+ */
+export function isOptimizableImageUrl(url: string): boolean {
+  return (
+    /^https:\/\/[^/]*\.supabase\.co\/storage\/v1\/object\/public\//i.test(url) ||
+    /^https:\/\/images\.unsplash\.com\//i.test(url)
+  );
+}
+
+/**
  * Given a stored media URL (as written by publish), decide how to render it and
  * build the display src. `autoplay` adds autoplay params where supported —
  * YouTube and direct files autoplay; Google Drive's preview player cannot, so

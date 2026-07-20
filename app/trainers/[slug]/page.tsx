@@ -109,7 +109,12 @@ export default async function TrainerDetailPage({
             <ProfileSection title={`${trainer.firstName}'s stories`}>
               <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 scrollbar-none md:mx-0 md:px-0">
                 {trainer.stories.map((story) => (
-                  <StoryCard key={story.id} story={story} size="profile" />
+                  <StoryCard
+                    key={story.id}
+                    story={story}
+                    size="profile"
+                    href={`/trainers/${trainer.slug}/stories/${story.id}`}
+                  />
                 ))}
               </div>
             </ProfileSection>

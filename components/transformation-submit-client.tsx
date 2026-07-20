@@ -65,6 +65,11 @@ export function TransformationSubmitClient({
     }
     setUploading(slot);
     const result = await uploadPublicFile(file, "submissions");
+    if (!result.persisted) {
+      setError("That photo couldn't be uploaded. Check your connection and try again.");
+      setUploading(null);
+      return;
+    }
     if (slot === "before") {
       setBeforeUrl(result.url);
     } else {

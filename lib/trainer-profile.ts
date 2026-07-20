@@ -31,6 +31,53 @@ export type ProfileVideoItem = {
   url: string;
 };
 
+export type StoryMediaKind = "image" | "video";
+
+/**
+ * One image or video slot in a story. Images are uploaded (a storage URL);
+ * videos are pasted Google Drive / YouTube / direct-file links (kept raw, like
+ * the gallery videos, and turned into embeddable URLs only at publish time).
+ * An empty `url` means the slot has no media yet.
+ */
+export type StoryMedia = {
+  kind: StoryMediaKind;
+  url: string;
+};
+
+/** One section of a story: a block of text with an optional image or video. */
+export type ProfileStorySection = {
+  id: string;
+  media: StoryMedia;
+  text: string;
+};
+
+/** A trainer-authored article: title, intro, a cover, and ordered sections. */
+export type ProfileStory = {
+  id: string;
+  title: string;
+  intro: string;
+  cover: StoryMedia;
+  sections: ProfileStorySection[];
+};
+
+export function emptyStoryMedia(): StoryMedia {
+  return { kind: "image", url: "" };
+}
+
+export function emptyStory(): ProfileStory {
+  return {
+    id: crypto.randomUUID(),
+    title: "",
+    intro: "",
+    cover: emptyStoryMedia(),
+    sections: [],
+  };
+}
+
+export function emptyStorySection(): ProfileStorySection {
+  return { id: crypto.randomUUID(), media: emptyStoryMedia(), text: "" };
+}
+
 /** What the listing card's quote line shows. */
 export type ListingBlurb = "description" | "review";
 
@@ -59,6 +106,7 @@ export type TrainerProfileDraft = {
   videos: ProfileVideoItem[];
   plans: ProfilePlan[];
   credentials: ProfileCredential[];
+  stories: ProfileStory[];
 };
 
 export const emptyProfile: TrainerProfileDraft = {
@@ -84,6 +132,7 @@ export const emptyProfile: TrainerProfileDraft = {
   videos: [],
   plans: [],
   credentials: [],
+  stories: [],
 };
 
 function stringOf(value: unknown): string {
@@ -129,6 +178,54 @@ function videosOf(value: unknown): ProfileVideoItem[] {
       url: stringOf(item.url),
     }))
     .filter((item) => item.url.length > 0);
+}
+
+function storyMediaOf(value: unknown): StoryMedia {
+  if (typeof value !== "object" || value === null) {
+    return emptyStoryMedia();
+  }
+
+  const raw = value as Record<string, unknown>;
+  return {
+    kind: raw.kind === "video" ? "video" : "image",
+    url: stringOf(raw.url),
+  };
+}
+
+function storySectionsOf(value: unknown): ProfileStorySection[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(
+      (item): item is Record<string, unknown> =>
+        typeof item === "object" && item !== null,
+    )
+    .map((item) => ({
+      id: stringOf(item.id) || crypto.randomUUID(),
+      media: storyMediaOf(item.media),
+      text: stringOf(item.text),
+    }));
+}
+
+function storiesOf(value: unknown): ProfileStory[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(
+      (item): item is Record<string, unknown> =>
+        typeof item === "object" && item !== null,
+    )
+    .map((item) => ({
+      id: stringOf(item.id) || crypto.randomUUID(),
+      title: stringOf(item.title),
+      intro: stringOf(item.intro),
+      cover: storyMediaOf(item.cover),
+      sections: storySectionsOf(item.sections),
+    }));
 }
 
 function plansOf(value: unknown): ProfilePlan[] {
@@ -210,6 +307,56 @@ export function parseProfileDraft(value: unknown): TrainerProfileDraft {
     videos: videosOf(raw.videos),
     plans: plansOf(raw.plans),
     credentials: credentialsOf(raw.credentials),
+    stories: storiesOf(raw.stories),
+  };
+}
+
+/**
+ * A URL safe to persist to the database. Uploads that fail (no storage
+ * configured, or a network error) fall back to a tab-local `blob:` object URL
+ * which is meaningless anywhere else — those must never reach the DB or they
+ * publish as permanently broken images.
+ */
+export function isStorableUrl(url: string): boolean {
+  return /^https?:\/\//i.test(url.trim());
+}
+
+/**
+ * Drop any image URL that isn't safe to store (blob:/data: previews from a
+ * failed upload). Applied server-side on save so a stranded preview never gets
+ * written to trainer_accounts.profile or published to the public tables.
+ */
+export function stripUnstorableImages(
+  profile: TrainerProfileDraft,
+): TrainerProfileDraft {
+  const keepUrl = (url: string) => (isStorableUrl(url) ? url : "");
+
+  // An uploaded image that failed leaves a blob: preview; drop it. A video slot
+  // holds a pasted link (never a storage upload), so leave it untouched — it is
+  // validated at publish.
+  const keepMedia = (media: StoryMedia): StoryMedia =>
+    media.kind === "image" && !isStorableUrl(media.url)
+      ? { ...media, url: "" }
+      : media;
+
+  return {
+    ...profile,
+    avatarUrl: keepUrl(profile.avatarUrl),
+    coverUrl: keepUrl(profile.coverUrl),
+    gallery: profile.gallery.filter((item) => isStorableUrl(item.url)),
+    credentials: profile.credentials.map((credential) => ({
+      ...credential,
+      fileUrl: keepUrl(credential.fileUrl),
+      fileType: isStorableUrl(credential.fileUrl) ? credential.fileType : "",
+    })),
+    stories: profile.stories.map((story) => ({
+      ...story,
+      cover: keepMedia(story.cover),
+      sections: story.sections.map((section) => ({
+        ...section,
+        media: keepMedia(section.media),
+      })),
+    })),
   };
 }
 

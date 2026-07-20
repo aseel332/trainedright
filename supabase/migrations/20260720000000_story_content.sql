@@ -1,0 +1,23 @@
+-- Rich trainer stories.
+--
+-- Stories grew from a flat card (title + excerpt + one image) into full
+-- articles: a title, intro, a cover image/video, and ordered sections that each
+-- pair text with an image or video. Rather than a new child table, the whole
+-- article is mirrored from trainer_accounts.profile.stories into a single jsonb
+-- column on the existing stories row, matching how the rest of a trainer's
+-- profile is stored and published.
+--
+-- Shape of `content`:
+--   {
+--     "intro": "…",
+--     "cover":  { "kind": "image" | "video", "url": "…", "posterUrl": "…" } | null,
+--     "sections": [
+--       { "id": "…", "text": "…",
+--         "media": { "kind": "image" | "video", "url": "…", "posterUrl": "…" } | null }
+--     ]
+--   }
+--
+-- Nullable, so the publish pipeline can still write the flat card columns on
+-- deployments where this migration has not been applied yet.
+
+alter table public.stories add column if not exists content jsonb;

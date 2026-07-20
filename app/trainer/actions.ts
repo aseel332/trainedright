@@ -9,11 +9,14 @@ import {
 import { syncPublishedTrainer } from "@/lib/server/trainer-publish";
 import {
   deleteOrphanedUploads,
+  deleteSubmissionUploads,
   sweepTrainerUploads,
 } from "@/lib/server/trainer-storage";
 import {
+  isStorableUrl,
   parseProfileDraft,
   profileIsSubmittable,
+  stripUnstorableImages,
   type TrainerProfileDraft,
 } from "@/lib/trainer-profile";
 
@@ -55,7 +58,9 @@ export async function saveTrainerProfile(
     return { ok: false, error: ctx.error };
   }
 
-  const profile = parseProfileDraft(rawProfile);
+  // Drop any tab-local blob:/data: preview left by a failed upload so it can
+  // never be persisted as a broken image URL.
+  const profile = stripUnstorableImages(parseProfileDraft(rawProfile));
 
   // Read what the profile pointed at before this save, so images the trainer
   // replaced or removed can be cleaned out of storage afterwards.
@@ -253,10 +258,16 @@ export async function createTransformationRequest(input: {
     return { ok: false, error: "Enter the client's name first." };
   }
 
-  if (
-    input.mode === "trainer_photos" &&
-    (!input.beforeImageUrl || !input.afterImageUrl)
-  ) {
+  // Only keep image URLs that actually persisted to storage; a failed upload
+  // leaves a tab-local blob: URL that must not be stored.
+  const beforeImageUrl = isStorableUrl(input.beforeImageUrl ?? "")
+    ? input.beforeImageUrl!
+    : "";
+  const afterImageUrl = isStorableUrl(input.afterImageUrl ?? "")
+    ? input.afterImageUrl!
+    : "";
+
+  if (input.mode === "trainer_photos" && (!beforeImageUrl || !afterImageUrl)) {
     return {
       ok: false,
       error: "Add both before and after photos for this flow.",
@@ -273,8 +284,8 @@ export async function createTransformationRequest(input: {
       title: input.title?.trim() ?? "",
       result_label: input.resultLabel?.trim() ?? "",
       duration_label: input.durationLabel?.trim() ?? "",
-      before_image_url: input.beforeImageUrl ?? "",
-      after_image_url: input.afterImageUrl ?? "",
+      before_image_url: beforeImageUrl,
+      after_image_url: afterImageUrl,
     })
     .select("id")
     .single();
@@ -295,6 +306,15 @@ export async function deleteTransformationRequest(
     return { ok: false, error: ctx.error };
   }
 
+  // Read the photos this row referenced before deleting, so client-submitted
+  // uploads in the shared `submissions/` folder can be cleaned up afterwards.
+  const { data: existing } = await ctx.supabase
+    .from("transformation_requests")
+    .select("before_image_url, after_image_url")
+    .eq("id", id)
+    .eq("trainer_user_id", ctx.user.id)
+    .maybeSingle();
+
   const { error } = await ctx.supabase
     .from("transformation_requests")
     .delete()
@@ -306,6 +326,13 @@ export async function deleteTransformationRequest(
   }
 
   await syncPublishedTrainer(ctx.user.id);
+
+  if (existing) {
+    await deleteSubmissionUploads(ctx.supabase, [
+      String(existing.before_image_url ?? ""),
+      String(existing.after_image_url ?? ""),
+    ]);
+  }
 
   revalidatePath("/trainer/dashboard");
   return { ok: true };

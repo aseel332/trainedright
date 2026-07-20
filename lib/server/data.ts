@@ -7,6 +7,8 @@ import { filterAndSortTrainers } from "@/lib/trainer-utils";
 import type {
   PricingOption,
   Story,
+  StoryMedia,
+  StorySection,
   Trainer,
   TrainerBadge,
   TrainerCredential,
@@ -66,6 +68,8 @@ type StoryRow = {
   avatar_url: string;
   is_featured: boolean;
   sort_order: number;
+  /** Rich article payload; absent on rows written before the content column. */
+  content?: unknown;
 };
 
 type MediaRow = {
@@ -183,7 +187,59 @@ function mapTrainer(row: TrainerRow): Trainer {
   };
 }
 
+function storyMediaOf(value: unknown): StoryMedia | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const raw = value as Record<string, unknown>;
+  const url = typeof raw.url === "string" ? raw.url : "";
+
+  if (!url) {
+    return null;
+  }
+
+  return {
+    kind: raw.kind === "video" ? "video" : "image",
+    url,
+    posterUrl: typeof raw.posterUrl === "string" ? raw.posterUrl : "",
+  };
+}
+
+function storySectionsOf(value: unknown): StorySection[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(
+      (item): item is Record<string, unknown> =>
+        typeof item === "object" && item !== null,
+    )
+    .map((item) => ({
+      id: typeof item.id === "string" && item.id ? item.id : crypto.randomUUID(),
+      text: typeof item.text === "string" ? item.text : "",
+      media: storyMediaOf(item.media),
+    }))
+    .filter((section) => section.text.trim().length > 0 || section.media !== null);
+}
+
 function mapStory(row: StoryRow): Story {
+  const content =
+    typeof row.content === "object" && row.content !== null
+      ? (row.content as Record<string, unknown>)
+      : {};
+
+  const intro =
+    typeof content.intro === "string" && content.intro.trim()
+      ? content.intro
+      : row.excerpt;
+
+  // Fall back to the flat card image for rows written before the content column.
+  const cover =
+    storyMediaOf(content.cover) ??
+    (row.image_url ? { kind: "image", url: row.image_url, posterUrl: "" } : null);
+
   return {
     id: row.id,
     trainerId: row.trainer_id,
@@ -194,6 +250,9 @@ function mapStory(row: StoryRow): Story {
     avatarUrl: row.avatar_url,
     isFeatured: row.is_featured,
     sortOrder: row.sort_order,
+    intro,
+    cover,
+    sections: storySectionsOf(content.sections),
   };
 }
 

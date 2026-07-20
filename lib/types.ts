@@ -31,6 +31,22 @@ export type Trainer = {
   sortRank: number;
 };
 
+export type StoryMediaKind = "image" | "video";
+
+/** A resolved image or video for public rendering (url is embeddable/served). */
+export type StoryMedia = {
+  kind: StoryMediaKind;
+  url: string;
+  posterUrl: string;
+};
+
+/** One published section of a story: text with an optional image or video. */
+export type StorySection = {
+  id: string;
+  text: string;
+  media: StoryMedia | null;
+};
+
 export type Story = {
   id: string;
   trainerId: string | null;
@@ -41,6 +57,11 @@ export type Story = {
   avatarUrl: string;
   isFeatured: boolean;
   sortOrder: number;
+  /** Lead paragraph shown under the title on the story page. */
+  intro: string;
+  /** The main image/video, or null when the story has none. */
+  cover: StoryMedia | null;
+  sections: StorySection[];
 };
 
 export type TrainerMedia = {

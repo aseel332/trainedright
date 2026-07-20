@@ -6,8 +6,11 @@ import { cookies } from "next/headers";
 import {
   ADMIN_SESSION_COOKIE,
   adminIsConfigured,
+  adminLoginLockoutSeconds,
   createAdminSessionToken,
   hasAdminSession,
+  registerAdminLoginFailure,
+  resetAdminLoginFailures,
   verifyAdminCredentials,
 } from "@/lib/server/admin-auth";
 import { createAdminSupabaseClient } from "@/lib/server/supabase-admin";
@@ -15,7 +18,10 @@ import {
   publishTrainerAccount,
   unpublishTrainerAccount,
 } from "@/lib/server/trainer-publish";
-import { deleteTrainerFolder } from "@/lib/server/trainer-storage";
+import {
+  deleteSubmissionUploads,
+  deleteTrainerFolder,
+} from "@/lib/server/trainer-storage";
 
 export type AdminActionResult = {
   ok: boolean;
@@ -37,12 +43,26 @@ export async function adminSignIn(
     };
   }
 
+  const lockoutSeconds = adminLoginLockoutSeconds();
+  if (lockoutSeconds > 0) {
+    const minutes = Math.ceil(lockoutSeconds / 60);
+    return {
+      ok: false,
+      error: `Too many failed attempts. Try again in about ${minutes} minute${
+        minutes === 1 ? "" : "s"
+      }.`,
+    };
+  }
+
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
 
   if (!verifyAdminCredentials(email, password)) {
+    registerAdminLoginFailure();
     return { ok: false, error: "That email and password do not match." };
   }
+
+  resetAdminLoginFailures();
 
   const token = createAdminSessionToken();
   const cookieStore = await cookies();
@@ -167,6 +187,24 @@ export async function deleteTrainer(userId: string): Promise<AdminActionResult> 
   // trainer's uploads first — once the account row is gone we no longer know
   // the folder was theirs.
   await deleteTrainerFolder(ctx.supabase, userId);
+
+  // Client-submitted transformation photos live in the shared `submissions/`
+  // folder, not the trainer's own folder, so gather them from the request rows
+  // (which the cascade is about to delete) and remove them too.
+  const { data: submissionRows } = await ctx.supabase
+    .from("transformation_requests")
+    .select("before_image_url, after_image_url")
+    .eq("trainer_user_id", userId);
+
+  if (submissionRows && submissionRows.length > 0) {
+    await deleteSubmissionUploads(
+      ctx.supabase,
+      submissionRows.flatMap((row) => [
+        String(row.before_image_url ?? ""),
+        String(row.after_image_url ?? ""),
+      ]),
+    );
+  }
 
   // Deleting the auth user cascades to trainer_accounts, review_requests,
   // transformation_requests, and the published `trainers` row. If the auth

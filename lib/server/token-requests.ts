@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminSupabaseClient } from "@/lib/server/supabase-admin";
+import { isStorableUrl } from "@/lib/trainer-profile";
 
 /**
  * Review / transformation link submissions.
@@ -174,8 +175,14 @@ export async function submitTransformationForToken(input: {
   if (input.durationLabel?.trim()) {
     update.duration_label = input.durationLabel.trim();
   }
-  if (input.beforeImageUrl) update.before_image_url = input.beforeImageUrl;
-  if (input.afterImageUrl) update.after_image_url = input.afterImageUrl;
+  // Only store URLs that actually persisted to storage; ignore a tab-local
+  // blob: preview from a failed client upload.
+  if (isStorableUrl(input.beforeImageUrl ?? "")) {
+    update.before_image_url = input.beforeImageUrl;
+  }
+  if (isStorableUrl(input.afterImageUrl ?? "")) {
+    update.after_image_url = input.afterImageUrl;
+  }
 
   const { data: updated, error } = await supabase
     .from("transformation_requests")

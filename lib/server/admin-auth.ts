@@ -77,3 +77,40 @@ export async function hasAdminSession() {
   const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   return token ? verifyAdminSessionToken(token) : false;
 }
+
+// In-memory brute-force throttle. The console has a single credential pair, so
+// a global counter is enough: after too many failures in a window, sign-in is
+// briefly locked regardless of which email was tried. State is per-instance,
+// which is acceptable for slowing down guessing.
+const MAX_FAILURES = 8;
+const LOCKOUT_MS = 15 * 60 * 1000;
+
+let failureCount = 0;
+let windowStartedAt = 0;
+let lockedUntil = 0;
+
+/** Seconds remaining on a lockout, or 0 when sign-in is allowed. */
+export function adminLoginLockoutSeconds(now = Date.now()) {
+  return lockedUntil > now ? Math.ceil((lockedUntil - now) / 1000) : 0;
+}
+
+/** Record a failed attempt; locks sign-in once the threshold is crossed. */
+export function registerAdminLoginFailure(now = Date.now()) {
+  if (now - windowStartedAt > LOCKOUT_MS) {
+    windowStartedAt = now;
+    failureCount = 0;
+  }
+  failureCount += 1;
+  if (failureCount >= MAX_FAILURES) {
+    lockedUntil = now + LOCKOUT_MS;
+    failureCount = 0;
+    windowStartedAt = now;
+  }
+}
+
+/** Clear the throttle after a successful sign-in. */
+export function resetAdminLoginFailures() {
+  failureCount = 0;
+  windowStartedAt = 0;
+  lockedUntil = 0;
+}

@@ -8,7 +8,6 @@ import {
   BadgeCheck,
   BarChart3,
   Check,
-  ClipboardCheck,
   Copy,
   CreditCard,
   Dumbbell,
@@ -46,6 +45,7 @@ import {
   PlansEditor,
   StorefrontEditor,
 } from "@/components/trainer-onboarding-client";
+import { StoriesEditor } from "@/components/trainer-stories-editor";
 import type {
   ReviewRequestItem,
   TransformationRequestItem,
@@ -136,7 +136,7 @@ const sections: {
   {
     id: "stories",
     label: "Stories",
-    detail: "Coming soon",
+    detail: "Articles & moments",
     icon: Newspaper,
   },
 ];
@@ -487,7 +487,18 @@ export function TrainerDashboardClient({
             />
           ) : null}
 
-          {section === "stories" ? <StoriesComingSoon /> : null}
+          {section === "stories" ? (
+            <Panel
+              title="Stories"
+              note="Long-form posts for your profile — a title, a lead, a cover, and photo/video sections. Saved changes go live on your profile."
+            >
+              <StoriesEditor
+                profile={profile}
+                userId={userId}
+                update={update}
+              />
+            </Panel>
+          ) : null}
         </section>
       </div>
 
@@ -1700,6 +1711,11 @@ function TransformationsSectionPanel({
     }
     setUploading(slot);
     const result = await uploadPublicFile(file, userId);
+    if (!result.persisted) {
+      setError("That photo couldn't be uploaded. Check your connection and try again.");
+      setUploading(null);
+      return;
+    }
     if (slot === "before") {
       setBeforeUrl(result.url);
     } else {
@@ -2021,26 +2037,3 @@ function TransformationsSectionPanel({
 
 /* ------------------------------ Stories ------------------------------ */
 
-function StoriesComingSoon() {
-  return (
-    <Panel title="Stories" note="Share training moments with your audience.">
-      <div className="rounded-[20px] border border-dashed border-white/15 bg-black/20 p-10 text-center">
-        <span className="mx-auto grid h-14 w-14 place-items-center rounded-[18px] bg-brand/15 text-brand-light">
-          <Newspaper aria-hidden="true" size={24} />
-        </span>
-        <h2 className="mt-5 font-display text-[26px] font-black text-white">
-          Coming soon
-        </h2>
-        <p className="mx-auto mt-2 max-w-sm text-[13px] font-semibold leading-6 text-muted">
-          Stories will let you post training moments, client wins, and behind
-          the scenes clips straight to your profile. We&apos;re polishing the
-          format.
-        </p>
-        <span className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-panel px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.12em] text-soft">
-          <ClipboardCheck aria-hidden="true" size={13} />
-          You&apos;ll be notified at launch
-        </span>
-      </div>
-    </Panel>
-  );
-}
