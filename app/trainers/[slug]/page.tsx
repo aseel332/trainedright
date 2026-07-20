@@ -9,7 +9,6 @@ import {
   Dumbbell,
   MapPin,
   ShieldCheck,
-  Star,
 } from "lucide-react";
 import { BadgeIcon } from "@/components/badge-icon";
 import { BookingBar } from "@/components/booking-bar";
@@ -60,6 +59,10 @@ export default async function TrainerDetailPage({
   if (!trainer) {
     notFound();
   }
+
+  // The free-trial pricing row is the one published with no price.
+  const offersFreeTrial = trainer.pricing.some((item) => item.priceInr === null);
+  const hasPlans = trainer.pricing.length > 0;
 
   return (
     <main className="min-h-screen bg-background pb-28 text-white lg:pb-12">
@@ -122,6 +125,7 @@ export default async function TrainerDetailPage({
 
           {trainer.pricing.length > 0 ? (
             <ProfileSection
+              id="plans"
               title="Pricing"
               note={`Set by ${trainer.firstName}. No platform fee.`}
             >
@@ -186,9 +190,10 @@ export default async function TrainerDetailPage({
         {trainer.whatsappNumber ? (
           <BookingBar
             slug={trainer.slug}
-            priceFromInr={trainer.priceFromInr}
             trainerName={trainer.name}
             whatsappNumber={trainer.whatsappNumber}
+            offersFreeTrial={offersFreeTrial}
+            hasPlans={hasPlans}
           />
         ) : null}
       </div>
@@ -235,32 +240,10 @@ function ProfileHero({ trainer }: { trainer: TrainerProfile }) {
             {trainer.name}
           </h1>
           <div className="mt-4 flex flex-wrap items-center gap-3 text-sm font-semibold text-soft md:text-base">
-            {trainer.reviewCount > 0 ? (
-              <span className="inline-flex items-center gap-1.5">
-                <Star
-                  aria-hidden="true"
-                  size={16}
-                  className="fill-brand text-brand"
-                />
-                <span className="font-extrabold text-white">
-                  {trainer.rating.toFixed(1)}
-                </span>
-                ({trainer.reviewCount})
-              </span>
-            ) : (
-              <span className="font-extrabold text-white">New coach</span>
-            )}
-            <span className="h-1 w-1 rounded-full bg-white/35" />
             <span className="inline-flex items-center gap-1.5">
               <MapPin aria-hidden="true" size={16} className="text-muted" />
               {trainer.city}
             </span>
-            {trainer.priceFromInr > 0 ? (
-              <>
-                <span className="h-1 w-1 rounded-full bg-white/35" />
-                <span>{formatPriceInr(trainer.priceFromInr)}/session</span>
-              </>
-            ) : null}
           </div>
           <SocialLinks trainer={trainer} />
         </div>
@@ -348,18 +331,20 @@ function StatsGrid({ trainer }: { trainer: TrainerProfile }) {
 }
 
 function ProfileSection({
+  id,
   title,
   note,
   compact = false,
   children,
 }: {
+  id?: string;
   title: string;
   note?: string;
   compact?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <section className={compact ? "" : "mt-8"}>
+    <section id={id} className={`scroll-mt-24 ${compact ? "" : "mt-8"}`}>
       <div className="mb-3 flex items-baseline justify-between gap-4">
         <h2 className="font-display text-[20px] font-black text-white md:text-[24px]">
           {title}

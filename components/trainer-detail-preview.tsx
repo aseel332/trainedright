@@ -6,10 +6,8 @@ import { InstagramIcon, XIcon, YoutubeIcon } from "@/components/social-icons";
 import { parseVideoLink } from "@/lib/media-links";
 import { normalizeSocialUrl } from "@/lib/socials";
 import { formatPriceInr } from "@/lib/trainer-utils";
-import {
-  profilePriceFromInr,
-  type TrainerProfileDraft,
-} from "@/lib/trainer-profile";
+import { draftPricingItems } from "@/lib/pricing";
+import { type TrainerProfileDraft } from "@/lib/trainer-profile";
 
 /**
  * A faithful, read-only render of how the public trainer detail page will look,
@@ -23,7 +21,6 @@ export function TrainerDetailPreview({
 }) {
   const name = profile.name.trim() || "Your name";
   const firstName = name.split(/\s+/)[0] ?? name;
-  const price = profilePriceFromInr(profile);
   const years = Number(profile.yearsExperience) || 0;
   const clients = Number(profile.clientsCount) || 0;
   const heroUrl = profile.coverUrl || profile.avatarUrl;
@@ -36,7 +33,7 @@ export function TrainerDetailPreview({
       (item): item is { id: string; parsed: NonNullable<typeof item.parsed> } =>
         item.parsed !== null,
     );
-  const plans = profile.plans;
+  const pricingItems = draftPricingItems(profile);
   const credentials = profile.credentials;
 
   const socials = [
@@ -93,18 +90,10 @@ export function TrainerDetailPreview({
               {name}
             </h2>
             <div className="mt-4 flex flex-wrap items-center gap-3 text-sm font-semibold text-soft">
-              <span className="font-extrabold text-white">New coach</span>
-              <span className="h-1 w-1 rounded-full bg-white/35" />
               <span className="inline-flex items-center gap-1.5">
                 <MapPin aria-hidden="true" size={15} className="text-muted" />
                 {profile.city || "Your city"}
               </span>
-              {price > 0 ? (
-                <>
-                  <span className="h-1 w-1 rounded-full bg-white/35" />
-                  <span>{formatPriceInr(price)}/session</span>
-                </>
-              ) : null}
             </div>
             {socials.length > 0 ? (
               <div className="mt-5 flex items-center gap-2.5">
@@ -210,54 +199,44 @@ export function TrainerDetailPreview({
         ) : null}
 
         {/* Pricing */}
-        {plans.length > 0 ? (
+        {pricingItems.length > 0 ? (
           <PreviewSection title="Pricing" note={`Set by ${firstName}. No platform fee.`}>
             <div className="grid gap-3 md:grid-cols-3">
-              {plans.map((plan) => {
-                const highlighted = plan.badge.toUpperCase() === "START HERE";
-                return (
-                  <div
-                    key={plan.id}
-                    className={`rounded-[15px] border p-4 ${
-                      highlighted
-                        ? "border-brand/50 bg-brand/10"
-                        : "border-white/10 bg-panel"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-display text-[16px] font-extrabold text-white">
-                            {plan.name}
-                          </h3>
-                          {plan.badge ? (
-                            <span className="rounded-full bg-brand px-2 py-1 text-[9px] font-extrabold uppercase text-black">
-                              {plan.badge}
-                            </span>
-                          ) : null}
-                        </div>
-                        {plan.description ? (
-                          <p className="mt-2 text-[12px] font-medium leading-5 text-muted">
-                            {plan.description}
-                          </p>
-                        ) : null}
+              {pricingItems.map((item) => (
+                <div
+                  key={item.id}
+                  className={`rounded-[15px] border p-4 ${
+                    item.highlighted
+                      ? "border-brand/50 bg-brand/10"
+                      : "border-white/10 bg-panel"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="font-display text-[16px] font-extrabold text-white">
+                        {item.name}
+                      </h3>
+                      {item.description ? (
+                        <p className="mt-2 text-[12px] font-medium leading-5 text-muted">
+                          {item.description}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex-none text-right">
+                      <div
+                        className={`font-display text-[20px] font-black ${
+                          item.highlighted ? "text-brand-light" : "text-white"
+                        }`}
+                      >
+                        {formatPriceInr(item.amount)}
                       </div>
-                      <div className="flex-none text-right">
-                        <div
-                          className={`font-display text-[20px] font-black ${
-                            highlighted ? "text-brand-light" : "text-white"
-                          }`}
-                        >
-                          {formatPriceInr(plan.price)}
-                        </div>
-                        <div className="mt-1 text-[10px] font-semibold text-muted">
-                          {plan.unit}
-                        </div>
+                      <div className="mt-1 text-[10px] font-semibold text-muted">
+                        {item.unit}
                       </div>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </PreviewSection>
         ) : null}

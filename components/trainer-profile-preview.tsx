@@ -212,7 +212,7 @@ function ListingCardPreview({ profile }: { profile: TrainerProfileDraft }) {
 }
 
 function ProfilePagePreview({ profile }: { profile: TrainerProfileDraft }) {
-  const { name, price, years, clients, tags, bio } = derive(profile);
+  const { name, years, clients, tags, bio } = derive(profile);
   const heroUrl = profile.coverUrl || profile.avatarUrl;
   const stats = [
     clients > 0 ? { value: `${clients}+`, label: "Clients" } : null,
@@ -246,18 +246,10 @@ function ProfilePagePreview({ profile }: { profile: TrainerProfileDraft }) {
             {name}
           </h3>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-soft">
-            <span className="font-extrabold text-white">New coach</span>
-            <span className="h-1 w-1 rounded-full bg-white/35" />
             <span className="inline-flex items-center gap-1">
               <MapPin aria-hidden="true" size={13} className="text-muted" />
               {profile.city || "Your city"}
             </span>
-            {price > 0 ? (
-              <>
-                <span className="h-1 w-1 rounded-full bg-white/35" />
-                <span>{formatPriceInr(price)}/session</span>
-              </>
-            ) : null}
           </div>
         </div>
       </div>

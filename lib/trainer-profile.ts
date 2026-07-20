@@ -2,13 +2,16 @@ import { stateForCity } from "@/lib/search-categories";
 
 export const MAX_SPECIALTIES = 4;
 
+/**
+ * A custom package: the trainer trains the client `daysPerWeek` days a week for
+ * `durationDays` days total, for a single `totalAmount` (not per session).
+ */
 export type ProfilePlan = {
   id: string;
   name: string;
-  description: string;
-  price: number | null;
-  unit: string;
-  badge: string;
+  daysPerWeek: number | null;
+  durationDays: number | null;
+  totalAmount: number | null;
 };
 
 export type ProfileCredential = {
@@ -95,6 +98,10 @@ export type TrainerProfileDraft = {
   youtube: string;
   yearsExperience: string;
   clientsCount: string;
+  /** Whether the coach offers a free first session. */
+  offersFreeTrial: boolean;
+  /** Price for a single session — the "from" price and the search sort key. */
+  perSessionFee: number | null;
   /** The membership plan chosen at go-live (see lib/subscription-plans). */
   subscriptionPlan: string;
   specialties: string[];
@@ -123,6 +130,8 @@ export const emptyProfile: TrainerProfileDraft = {
   youtube: "",
   yearsExperience: "",
   clientsCount: "",
+  offersFreeTrial: false,
+  perSessionFee: null,
   subscriptionPlan: "",
   specialties: [],
   searchCategories: [],
@@ -138,6 +147,13 @@ export const emptyProfile: TrainerProfileDraft = {
 
 function stringOf(value: unknown): string {
   return typeof value === "string" ? value : "";
+}
+
+function numberOrNull(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return value;
+  }
+  return null;
 }
 
 function stringArrayOf(value: unknown): string[] {
@@ -243,15 +259,12 @@ function plansOf(value: unknown): ProfilePlan[] {
     .map((item) => ({
       id: stringOf(item.id) || crypto.randomUUID(),
       name: stringOf(item.name),
-      description: stringOf(item.description),
-      price:
-        typeof item.price === "number" && Number.isFinite(item.price)
-          ? item.price
-          : null,
-      unit: stringOf(item.unit),
-      badge: stringOf(item.badge),
+      daysPerWeek: numberOrNull(item.daysPerWeek),
+      durationDays: numberOrNull(item.durationDays),
+      totalAmount: numberOrNull(item.totalAmount),
     }))
-    .filter((item) => item.name.length > 0);
+    // Keep only packages that carry real information (a price or a duration).
+    .filter((item) => item.totalAmount !== null || item.durationDays !== null);
 }
 
 function credentialsOf(value: unknown): ProfileCredential[] {
@@ -299,6 +312,8 @@ export function parseProfileDraft(value: unknown): TrainerProfileDraft {
     youtube: stringOf(raw.youtube),
     yearsExperience: stringOf(raw.yearsExperience),
     clientsCount: stringOf(raw.clientsCount),
+    offersFreeTrial: raw.offersFreeTrial === true,
+    perSessionFee: numberOrNull(raw.perSessionFee),
     subscriptionPlan: stringOf(raw.subscriptionPlan),
     specialties: stringArrayOf(raw.specialties).slice(0, MAX_SPECIALTIES),
     searchCategories: stringArrayOf(raw.searchCategories),
@@ -405,12 +420,20 @@ export function profileIsSubmittable(profile: TrainerProfileDraft) {
   return profileRequirements(profile).every((item) => item.done);
 }
 
-/** The "from" price shown on cards — the cheapest paid plan, or 0 if none. */
+/** The "from" price shown on cards and the search sort key: the per-session fee. */
 export function profilePriceFromInr(profile: TrainerProfileDraft) {
-  const prices = profile.plans
-    .map((plan) => plan.price)
-    .filter((price): price is number => typeof price === "number" && price > 0);
-  return prices.length > 0 ? Math.round(Math.min(...prices)) : 0;
+  return profile.perSessionFee && profile.perSessionFee > 0
+    ? Math.round(profile.perSessionFee)
+    : 0;
+}
+
+/** Whether the coach has set up any pricing (free trial, a fee, or a package). */
+export function profileHasPricing(profile: TrainerProfileDraft) {
+  return (
+    profile.offersFreeTrial ||
+    (profile.perSessionFee ?? 0) > 0 ||
+    profile.plans.length > 0
+  );
 }
 
 export function profileCompletionPercent(profile: TrainerProfileDraft) {
@@ -419,7 +442,7 @@ export function profileCompletionPercent(profile: TrainerProfileDraft) {
     Boolean(profile.avatarUrl),
     Boolean(profile.coverUrl),
     profile.gallery.length > 0,
-    profile.plans.length > 0,
+    profileHasPricing(profile),
     profile.credentials.length > 0,
     Boolean(profile.city),
   ];

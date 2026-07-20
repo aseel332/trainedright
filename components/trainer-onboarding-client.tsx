@@ -54,10 +54,10 @@ import {
   parseProfileDraft,
   profileRequirements,
   type ProfileCredential,
-  type ProfilePlan,
   type ProfileRequirement,
   type TrainerProfileDraft,
 } from "@/lib/trainer-profile";
+import { planCadence, planDefaultName } from "@/lib/pricing";
 import { uploadPublicFile } from "@/lib/client/upload";
 
 type StepId =
@@ -120,8 +120,8 @@ const steps: StepDef[] = [
   {
     id: "plans",
     kicker: "Your offer",
-    title: "Create your own price plans.",
-    tip: "You set the structure — per session, monthly, an 8-week block, anything. A free trial plan is the single best converter.",
+    title: "Set your pricing.",
+    tip: "Offer a free first session, set your per-session fee, and add custom packages (days a week × total days for one price). Your per-session fee is how clients compare you.",
     optional: true,
   },
   {
@@ -136,30 +136,6 @@ const steps: StepDef[] = [
     kicker: "Go live",
     title: "This is your profile. Pick a plan to submit.",
     tip: "Here's exactly how clients will see you. Choose a plan below to send your profile for approval — once approved, it goes live.",
-  },
-];
-
-const planTemplates: Omit<ProfilePlan, "id">[] = [
-  {
-    name: "Trial session",
-    description: "45 min meet and assess",
-    price: null,
-    unit: "first session",
-    badge: "START HERE",
-  },
-  {
-    name: "Per session",
-    description: "60 min pay as you go",
-    price: 800,
-    unit: "per session",
-    badge: "",
-  },
-  {
-    name: "Monthly plan",
-    description: "12 sessions plus WhatsApp support",
-    price: 6000,
-    unit: "per month",
-    badge: "POPULAR",
   },
 ];
 
@@ -509,10 +485,7 @@ export function TrainerOnboardingClient({
           ) : null}
 
           {step.id === "plans" ? (
-            <PlansEditor
-              plans={profile.plans}
-              onChange={(plans) => update({ plans })}
-            />
+            <PricingEditor profile={profile} update={update} />
           ) : null}
 
           {step.id === "credentials" ? (
@@ -1601,160 +1574,252 @@ function UploadTile({
   );
 }
 
-export function PlansEditor({
-  plans,
+function PricingToggle({
+  checked,
   onChange,
+  label,
 }: {
-  plans: ProfilePlan[];
-  onChange: (plans: ProfilePlan[]) => void;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  label: string;
 }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-7 w-12 flex-none items-center rounded-full transition ${
+        checked ? "bg-brand" : "bg-white/15"
+      }`}
+    >
+      <span
+        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+          checked ? "translate-x-6" : "translate-x-1"
+        }`}
+      />
+    </button>
+  );
+}
+
+function amountFromInput(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const parsed = Math.round(Number(trimmed));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+export function PricingEditor({
+  profile,
+  update,
+}: {
+  profile: TrainerProfileDraft;
+  update: (patch: Partial<TrainerProfileDraft>) => void;
+}) {
+  const plans = profile.plans;
   const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [unit, setUnit] = useState("per session");
-  const [description, setDescription] = useState("");
-  const [badge, setBadge] = useState("");
+  const [daysPerWeek, setDaysPerWeek] = useState("");
+  const [durationDays, setDurationDays] = useState("");
+  const [amount, setAmount] = useState("");
 
   function addPlan() {
-    if (!name.trim()) {
+    const totalAmount = amountFromInput(amount);
+    if (totalAmount === null || totalAmount <= 0) {
       return;
     }
-    onChange([
-      ...plans,
-      {
-        id: crypto.randomUUID(),
-        name: name.trim(),
-        description: description.trim(),
-        price: price.trim() ? Math.max(0, Number(price)) : null,
-        unit: unit.trim() || "per session",
-        badge: badge.trim(),
-      },
-    ]);
+    update({
+      plans: [
+        ...plans,
+        {
+          id: crypto.randomUUID(),
+          name: name.trim(),
+          daysPerWeek: amountFromInput(daysPerWeek),
+          durationDays: amountFromInput(durationDays),
+          totalAmount,
+        },
+      ],
+    });
     setName("");
-    setPrice("");
-    setDescription("");
-    setBadge("");
+    setDaysPerWeek("");
+    setDurationDays("");
+    setAmount("");
   }
 
   return (
-    <div className="max-w-xl space-y-5">
-      {plans.length > 0 ? (
-        <div className="space-y-2">
-          {plans.map((plan) => (
-            <div
-              key={plan.id}
-              className="flex items-start justify-between gap-3 rounded-[16px] border border-white/10 bg-panel p-4"
-            >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
+    <div className="max-w-xl space-y-6">
+      {/* Free trial */}
+      <div className="rounded-[18px] border border-white/10 bg-panel p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-extrabold text-white">
+              Free first session
+            </p>
+            <p className="mt-1 text-[12px] font-medium leading-5 text-muted">
+              Offer a free trial session — the single best way to turn a browser
+              into a client. Shows as a “Free trial” option on your profile.
+            </p>
+          </div>
+          <PricingToggle
+            checked={profile.offersFreeTrial}
+            onChange={(offersFreeTrial) => update({ offersFreeTrial })}
+            label="Offer a free first session"
+          />
+        </div>
+      </div>
+
+      {/* Per-session fee */}
+      <div className="rounded-[18px] border border-white/10 bg-panel p-4">
+        <p className="text-sm font-extrabold text-white">Per-session fee</p>
+        <p className="mt-1 text-[12px] font-medium leading-5 text-muted">
+          What you charge for a single session. This is the price on your card
+          and how clients compare and sort coaches in search.
+        </p>
+        <div className="mt-3 flex items-center gap-2">
+          <span className="grid h-12 w-11 flex-none place-items-center rounded-[12px] border border-white/10 bg-black/30 text-[16px] font-black text-muted">
+            ₹
+          </span>
+          <input
+            value={profile.perSessionFee ?? ""}
+            onChange={(event) =>
+              update({ perSessionFee: amountFromInput(event.target.value) })
+            }
+            type="number"
+            min={0}
+            inputMode="numeric"
+            placeholder="e.g. 800"
+            aria-label="Per-session fee in rupees"
+            className="h-12 w-full rounded-[12px] border border-white/10 bg-black/30 px-4 text-sm font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand"
+          />
+          <span className="flex-none text-[12px] font-semibold text-muted">
+            / session
+          </span>
+        </div>
+      </div>
+
+      {/* Custom packages */}
+      <div>
+        <p className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
+          Custom packages
+        </p>
+        <p className="mb-3 text-[12px] font-medium leading-5 text-muted">
+          A block of coaching for one total price — set how many days a week you
+          train the client, over how many days total, for how much.
+        </p>
+
+        {plans.length > 0 ? (
+          <div className="space-y-2">
+            {plans.map((plan) => (
+              <div
+                key={plan.id}
+                className="flex items-start justify-between gap-3 rounded-[16px] border border-white/10 bg-panel p-4"
+              >
+                <div className="min-w-0">
                   <p className="text-sm font-extrabold text-white">
-                    {plan.name}
+                    {plan.name.trim() || planDefaultName(plan)}
                   </p>
-                  {plan.badge ? (
-                    <span className="rounded-full bg-brand px-2 py-0.5 text-[9px] font-extrabold uppercase text-white">
-                      {plan.badge}
-                    </span>
+                  {planCadence(plan) ? (
+                    <p className="mt-1 text-[12px] font-medium text-muted">
+                      {planCadence(plan)}
+                    </p>
                   ) : null}
                 </div>
-                {plan.description ? (
-                  <p className="mt-1 text-[12px] font-medium text-muted">
-                    {plan.description}
-                  </p>
-                ) : null}
-              </div>
-              <div className="flex flex-none items-center gap-3">
-                <div className="text-right">
-                  <p className="font-display text-[18px] font-black text-white">
-                    {plan.price === null
-                      ? "Free"
-                      : `₹${plan.price.toLocaleString("en-IN")}`}
-                  </p>
-                  <p className="text-[10px] font-semibold text-muted">
-                    {plan.unit}
-                  </p>
+                <div className="flex flex-none items-center gap-3">
+                  <div className="text-right">
+                    <p className="font-display text-[18px] font-black text-white">
+                      {plan.totalAmount === null
+                        ? "—"
+                        : `₹${plan.totalAmount.toLocaleString("en-IN")}`}
+                    </p>
+                    <p className="text-[10px] font-semibold text-muted">total</p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${plan.name.trim() || "package"}`}
+                    onClick={() =>
+                      update({
+                        plans: plans.filter((item) => item.id !== plan.id),
+                      })
+                    }
+                    className="grid h-8 w-8 place-items-center rounded-full bg-white/5 text-muted transition hover:bg-brand hover:text-white"
+                  >
+                    <Trash2 aria-hidden="true" size={14} />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  aria-label={`Remove ${plan.name}`}
-                  onClick={() =>
-                    onChange(plans.filter((item) => item.id !== plan.id))
-                  }
-                  className="grid h-8 w-8 place-items-center rounded-full bg-white/5 text-muted transition hover:bg-brand hover:text-white"
-                >
-                  <Trash2 aria-hidden="true" size={14} />
-                </button>
               </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {planTemplates.map((template) => (
-            <button
-              key={template.name}
-              type="button"
-              onClick={() =>
-                onChange([
-                  ...plans,
-                  { ...template, id: crypto.randomUUID() },
-                ])
-              }
-              className="rounded-full border border-white/10 bg-panel px-3.5 py-2 text-[12px] font-extrabold text-soft transition hover:border-brand/40 hover:text-white"
-            >
-              + {template.name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="rounded-[18px] border border-white/10 bg-panel p-4">
-        <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
-          New plan
-        </p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Plan name (e.g. 8-week block)"
-            className="h-12 w-full rounded-[12px] border border-white/10 bg-black/30 px-4 text-sm font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand"
-          />
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              value={price}
-              onChange={(event) => setPrice(event.target.value)}
-              placeholder="₹ (blank = free)"
-              type="number"
-              min={0}
-              className="h-12 w-full rounded-[12px] border border-white/10 bg-black/30 px-4 text-sm font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand"
-            />
-            <input
-              value={unit}
-              onChange={(event) => setUnit(event.target.value)}
-              placeholder="per month"
-              className="h-12 w-full rounded-[12px] border border-white/10 bg-black/30 px-4 text-sm font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand"
-            />
+            ))}
           </div>
-          <input
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="What's included"
-            className="h-12 w-full rounded-[12px] border border-white/10 bg-black/30 px-4 text-sm font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand"
-          />
-          <input
-            value={badge}
-            onChange={(event) => setBadge(event.target.value)}
-            placeholder="Badge (e.g. POPULAR) — optional"
-            className="h-12 w-full rounded-[12px] border border-white/10 bg-black/30 px-4 text-sm font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand"
-          />
+        ) : null}
+
+        <div className="mt-3 rounded-[18px] border border-white/10 bg-panel p-4">
+          <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
+            New package
+          </p>
+          <div className="space-y-3">
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Package name (optional, e.g. 3-Month Transformation)"
+              className="h-12 w-full rounded-[12px] border border-white/10 bg-black/30 px-4 text-sm font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-extrabold text-muted">
+                  Days / week
+                </span>
+                <input
+                  value={daysPerWeek}
+                  onChange={(event) => setDaysPerWeek(event.target.value)}
+                  type="number"
+                  min={1}
+                  max={7}
+                  inputMode="numeric"
+                  placeholder="e.g. 3"
+                  className="h-12 w-full rounded-[12px] border border-white/10 bg-black/30 px-4 text-sm font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-extrabold text-muted">
+                  Duration (days)
+                </span>
+                <input
+                  value={durationDays}
+                  onChange={(event) => setDurationDays(event.target.value)}
+                  type="number"
+                  min={1}
+                  inputMode="numeric"
+                  placeholder="e.g. 90"
+                  className="h-12 w-full rounded-[12px] border border-white/10 bg-black/30 px-4 text-sm font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand"
+                />
+              </label>
+            </div>
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-extrabold text-muted">
+                Total amount (₹)
+              </span>
+              <input
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                type="number"
+                min={0}
+                inputMode="numeric"
+                placeholder="e.g. 45000 — the full price for the whole package"
+                className="h-12 w-full rounded-[12px] border border-white/10 bg-black/30 px-4 text-sm font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand"
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            onClick={addPlan}
+            disabled={!amount.trim()}
+            className="mt-3 inline-flex h-11 items-center gap-2 rounded-[12px] bg-brand px-4 text-[13px] font-extrabold text-white transition enabled:hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-muted"
+          >
+            <Plus aria-hidden="true" size={15} />
+            Add package
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={addPlan}
-          disabled={!name.trim()}
-          className="mt-3 inline-flex h-11 items-center gap-2 rounded-[12px] bg-brand px-4 text-[13px] font-extrabold text-white transition enabled:hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-muted"
-        >
-          <Plus aria-hidden="true" size={15} />
-          Add plan
-        </button>
       </div>
     </div>
   );

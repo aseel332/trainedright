@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { categoryIdsToSpecs, stateForCity } from "@/lib/search-categories";
 import { parseVideoLink } from "@/lib/media-links";
+import { draftPricingItems } from "@/lib/pricing";
 import { createAdminSupabaseClient } from "@/lib/server/supabase-admin";
 import {
   parseProfileDraft,
@@ -97,11 +98,9 @@ function clientsOf(value: string) {
 }
 
 function priceFrom(profile: TrainerProfileDraft) {
-  const prices = profile.plans
-    .map((plan) => plan.price)
-    .filter((price): price is number => typeof price === "number" && price > 0);
-
-  return prices.length > 0 ? Math.round(Math.min(...prices)) : 0;
+  return profile.perSessionFee && profile.perSessionFee > 0
+    ? Math.round(profile.perSessionFee)
+    : 0;
 }
 
 type PublishedStoryMedia = {
@@ -369,13 +368,13 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
 
   const mediaRows = [...videoRows, ...photoRows];
 
-  const pricingRows = profile.plans.map((plan, index) => ({
+  const pricingRows = draftPricingItems(profile).map((item, index) => ({
     trainer_id: trainerId,
-    name: plan.name,
-    description: plan.description,
-    price_inr: typeof plan.price === "number" ? Math.round(plan.price) : null,
-    unit: plan.unit || "per session",
-    badge: plan.badge || null,
+    name: item.name,
+    description: item.description,
+    price_inr: item.amount,
+    unit: item.unit,
+    badge: item.highlighted ? "START HERE" : null,
     sort_order: index + 1,
   }));
 

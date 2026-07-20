@@ -42,7 +42,7 @@ import {
 import {
   CredentialsEditor,
   PhotosEditor,
-  PlansEditor,
+  PricingEditor,
   StorefrontEditor,
 } from "@/components/trainer-onboarding-client";
 import { StoriesEditor } from "@/components/trainer-stories-editor";
@@ -447,13 +447,10 @@ export function TrainerDashboardClient({
 
           {section === "plans" ? (
             <Panel
-              title="Price plans"
-              note="Fully custom — you decide names, prices, and units."
+              title="Pricing"
+              note="A free trial, your per-session fee, and custom packages. Clients compare and sort coaches by the per-session fee."
             >
-              <PlansEditor
-                plans={profile.plans}
-                onChange={(plans) => update({ plans })}
-              />
+              <PricingEditor profile={profile} update={update} />
             </Panel>
           ) : null}
 
