@@ -2,13 +2,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ChevronDown, MapPin } from "lucide-react";
-import { cityOptions, searchCategories } from "@/lib/search-categories";
+import { ArrowRight, ChevronDown, MapPin, Trophy } from "lucide-react";
+import {
+  SPORT_CATEGORY_ID,
+  cityOptions,
+  searchCategories,
+} from "@/lib/search-categories";
 
 export function HomeHeroSearch() {
   const router = useRouter();
   const [city, setCity] = useState("");
-  const [category, setCategory] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
+
+  function toggleCategory(id: string) {
+    setCategories((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id],
+    );
+  }
 
   function findCoaches() {
     if (!city) {
@@ -16,8 +28,8 @@ export function HomeHeroSearch() {
     }
     const params = new URLSearchParams();
     params.set("city", city);
-    if (category) {
-      params.set("cat", category);
+    if (categories.length > 0) {
+      params.set("cat", categories.join(","));
     }
     router.push(`/trainers?${params.toString()}`);
   }
@@ -68,12 +80,13 @@ export function HomeHeroSearch() {
 
       <div className="mt-3 flex flex-wrap gap-2">
         {searchCategories.map((item) => {
-          const active = category === item.id;
+          const active = categories.includes(item.id);
           return (
             <button
               key={item.id}
               type="button"
-              onClick={() => setCategory(active ? null : item.id)}
+              onClick={() => toggleCategory(item.id)}
+              aria-pressed={active}
               className={`rounded-full border px-3.5 py-2 text-[12px] font-extrabold transition ${
                 active
                   ? "border-brand bg-brand text-white"
@@ -85,6 +98,13 @@ export function HomeHeroSearch() {
           );
         })}
       </div>
+
+      {categories.includes(SPORT_CATEGORY_ID) ? (
+        <p className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-muted">
+          <Trophy aria-hidden="true" size={13} className="text-brand-light" />
+          You&apos;ll choose specific sports on the results page.
+        </p>
+      ) : null}
     </div>
   );
 }

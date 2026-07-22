@@ -3,7 +3,7 @@ import "server-only";
 import { createPublicServerClient } from "@/lib/server/supabase-public";
 import { connection } from "next/server";
 import { stateForCity } from "@/lib/search-categories";
-import { filterAndSortTrainers } from "@/lib/trainer-utils";
+import { filterAndSortTrainers, type TrainerQuery } from "@/lib/trainer-utils";
 import type {
   PricingOption,
   Story,
@@ -18,15 +18,6 @@ import type {
   TrainerReview,
   Transformation,
 } from "@/lib/types";
-
-type TrainerQuery = {
-  query?: string;
-  specs?: string[];
-  verified?: boolean;
-  maxPrice?: number;
-  sort?: "recommended" | "rating" | "experience" | "price";
-  limit?: number;
-};
 
 type TrainerRow = {
   id: string;
@@ -51,7 +42,10 @@ type TrainerRow = {
   instagram?: string | null;
   x?: string | null;
   youtube?: string | null;
+  /** Carries the raw category ids that power the listing's category filter. */
   specialties: string[] | null;
+  /** Sports a Sports Coach coaches; absent before the sports column migration. */
+  sports?: string[] | null;
   tags: string[] | null;
   badges: string[] | null;
   testimonial: string;
@@ -179,7 +173,8 @@ function mapTrainer(row: TrainerRow): Trainer {
     instagram: row.instagram ?? "",
     x: row.x ?? "",
     youtube: row.youtube ?? "",
-    specialties: stringArray(row.specialties),
+    categories: stringArray(row.specialties),
+    sports: stringArray(row.sports),
     tags: stringArray(row.tags),
     badges: badgeArray(row.badges),
     testimonial: row.testimonial,
@@ -381,6 +376,31 @@ export async function getFeaturedStories() {
     .eq("is_featured", true)
     .order("sort_order", { ascending: true })
     .limit(6);
+
+  if (error || !data) {
+    return [];
+  }
+
+  return (data as StoryRow[]).map(mapStory);
+}
+
+/** Every active story across the marketplace, featured ones first. */
+export async function getStories(limit = 12) {
+  const supabase = createPublicServerClient();
+
+  if (!supabase) {
+    return [];
+  }
+
+  await connection();
+
+  const { data, error } = await supabase
+    .from("stories")
+    .select("*")
+    .eq("is_active", true)
+    .order("is_featured", { ascending: false })
+    .order("sort_order", { ascending: true })
+    .limit(limit);
 
   if (error || !data) {
     return [];

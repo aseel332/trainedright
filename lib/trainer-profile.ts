@@ -1,4 +1,4 @@
-import { stateForCity } from "@/lib/search-categories";
+import { SPORT_CATEGORY_ID, stateForCity } from "@/lib/search-categories";
 
 export const MAX_SPECIALTIES = 4;
 
@@ -106,6 +106,8 @@ export type TrainerProfileDraft = {
   subscriptionPlan: string;
   specialties: string[];
   searchCategories: string[];
+  /** Sports coached — required (and only used) when the "sport" category is on. */
+  sports: string[];
   avatarUrl: string;
   coverUrl: string;
   /** Whether the listing card highlights the bio or a top client review. */
@@ -135,6 +137,7 @@ export const emptyProfile: TrainerProfileDraft = {
   subscriptionPlan: "",
   specialties: [],
   searchCategories: [],
+  sports: [],
   avatarUrl: "",
   coverUrl: "",
   listingBlurb: "description",
@@ -317,6 +320,7 @@ export function parseProfileDraft(value: unknown): TrainerProfileDraft {
     subscriptionPlan: stringOf(raw.subscriptionPlan),
     specialties: stringArrayOf(raw.specialties).slice(0, MAX_SPECIALTIES),
     searchCategories: stringArrayOf(raw.searchCategories),
+    sports: stringArrayOf(raw.sports),
     avatarUrl: stringOf(raw.avatarUrl),
     coverUrl: stringOf(raw.coverUrl),
     listingBlurb: raw.listingBlurb === "review" ? "review" : "description",
@@ -387,6 +391,8 @@ export type ProfileRequirement = {
 export function profileRequirements(
   profile: TrainerProfileDraft,
 ): ProfileRequirement[] {
+  const coachesSport = profile.searchCategories.includes(SPORT_CATEGORY_ID);
+
   return [
     {
       id: "name",
@@ -398,6 +404,17 @@ export function profileRequirements(
       label: "At least one search category",
       done: profile.searchCategories.length > 0,
     },
+    // A Sports Coach must name the sports they coach, so clients can find them
+    // by sport. Only applies while the "sport" category is selected.
+    ...(coachesSport
+      ? [
+          {
+            id: "sports",
+            label: "At least one sport",
+            done: profile.sports.length > 0,
+          },
+        ]
+      : []),
     {
       id: "specialties",
       label: "At least one specialty",

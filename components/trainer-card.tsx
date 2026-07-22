@@ -43,7 +43,7 @@ export function TrainerCard({
       <div className="min-w-0 pt-0.5">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="truncate font-display text-[18px] font-extrabold leading-tight md:text-[22px]">
+            <h3 className="font-display text-[17px] font-extrabold leading-tight [overflow-wrap:anywhere] line-clamp-2 md:text-[20px]">
               {trainer.name}
             </h3>
             <p className="mt-1 text-[11px] font-semibold text-muted md:text-xs">

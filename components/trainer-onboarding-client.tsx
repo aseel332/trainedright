@@ -45,9 +45,11 @@ import {
   type SubscriptionPlan,
 } from "@/lib/subscription-plans";
 import {
+  SPORT_CATEGORY_ID,
   cityOptions,
   searchCategories,
   specialtySuggestions,
+  sportSuggestions,
 } from "@/lib/search-categories";
 import {
   MAX_SPECIALTIES,
@@ -212,7 +214,14 @@ export function TrainerOnboardingClient({
       return profile.name.trim().length < 2;
     }
     if (step.id === "categories") {
-      return profile.searchCategories.length === 0;
+      if (profile.searchCategories.length === 0) {
+        return true;
+      }
+      // A Sports Coach must name at least one sport before moving on.
+      return (
+        profile.searchCategories.includes(SPORT_CATEGORY_ID) &&
+        profile.sports.length === 0
+      );
     }
     if (step.id === "location") {
       return profile.city.trim().length === 0;
@@ -427,6 +436,11 @@ export function TrainerOnboardingClient({
                               (id) => id !== category.id,
                             )
                           : [...profile.searchCategories, category.id],
+                        // Drop the sports list when Sports Coach is switched off
+                        // so we never publish orphaned sports.
+                        ...(active && category.id === SPORT_CATEGORY_ID
+                          ? { sports: [] }
+                          : {}),
                       })
                     }
                     className={`flex items-center gap-4 rounded-[16px] border p-4 text-left transition ${
@@ -464,6 +478,22 @@ export function TrainerOnboardingClient({
               <p className="mt-1 text-[12px] font-semibold text-muted">
                 Select every category you coach — clients filter by these.
               </p>
+
+              {profile.searchCategories.includes(SPORT_CATEGORY_ID) ? (
+                <div className="mt-4 rounded-[16px] border border-white/10 bg-black/20 p-4">
+                  <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
+                    Which sports do you coach?
+                    <span className="ml-1 text-brand-light">*</span>
+                  </p>
+                  <p className="mb-3 mt-1 text-[12px] font-medium leading-5 text-muted">
+                    Type each sport you coach — clients search and filter by these.
+                  </p>
+                  <SportsEditor
+                    sports={profile.sports}
+                    onChange={(sports) => update({ sports })}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -1195,6 +1225,120 @@ export function SpecialtiesEditor({
           disabled={!input.trim() || remaining <= 0}
           className="grid h-[52px] w-[52px] flex-none place-items-center rounded-[14px] bg-brand text-white transition enabled:hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-muted"
           aria-label="Add specialty"
+        >
+          <Plus aria-hidden="true" size={20} />
+        </button>
+      </div>
+
+      {remaining > 0 && availableSuggestions.length > 0 ? (
+        <div className="mt-4">
+          <p className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
+            Ideas
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {availableSuggestions.slice(0, 10).map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => add(suggestion)}
+                className="rounded-full border border-white/10 bg-panel px-3 py-1.5 text-[12px] font-bold text-soft transition hover:border-brand/40 hover:text-white"
+              >
+                + {suggestion}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const MAX_SPORTS = 8;
+
+/**
+ * Free-text sports picker for Sports Coaches — mirrors SpecialtiesEditor but is
+ * uncapped-suggestion (trainers can type any sport). The set of sports across
+ * all trainers becomes the marketplace's searchable sports list.
+ */
+export function SportsEditor({
+  sports,
+  onChange,
+}: {
+  sports: string[];
+  onChange: (sports: string[]) => void;
+}) {
+  const [input, setInput] = useState("");
+  const remaining = MAX_SPORTS - sports.length;
+
+  function add(raw: string) {
+    const value = raw.trim();
+    if (!value || remaining <= 0) {
+      return;
+    }
+    const exists = sports.some(
+      (item) => item.toLowerCase() === value.toLowerCase(),
+    );
+    if (!exists) {
+      onChange([...sports, value]);
+    }
+    setInput("");
+  }
+
+  const availableSuggestions = sportSuggestions.filter(
+    (suggestion) =>
+      !sports.some((item) => item.toLowerCase() === suggestion.toLowerCase()),
+  );
+
+  return (
+    <div className="max-w-xl">
+      <div className="flex flex-wrap gap-2">
+        {sports.map((item) => (
+          <span
+            key={item}
+            className="inline-flex items-center gap-2 rounded-full border border-brand/50 bg-brand/10 py-2 pl-4 pr-2 text-[13px] font-extrabold text-white"
+          >
+            {item}
+            <button
+              type="button"
+              aria-label={`Remove ${item}`}
+              onClick={() => onChange(sports.filter((value) => value !== item))}
+              className="grid h-6 w-6 place-items-center rounded-full bg-white/10 text-soft transition hover:bg-brand hover:text-white"
+            >
+              <X aria-hidden="true" size={13} />
+            </button>
+          </span>
+        ))}
+        {sports.length === 0 ? (
+          <span className="text-[13px] font-semibold text-muted">
+            Nothing added yet — write your sports below.
+          </span>
+        ) : null}
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        <input
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              add(input);
+            }
+          }}
+          disabled={remaining <= 0}
+          placeholder={
+            remaining > 0
+              ? `Type a sport (${remaining} left)`
+              : `Maximum of ${MAX_SPORTS} added`
+          }
+          className="h-[52px] w-full rounded-[14px] border border-white/10 bg-panel px-4 text-[15px] font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand disabled:opacity-50"
+        />
+        <button
+          type="button"
+          onClick={() => add(input)}
+          disabled={!input.trim() || remaining <= 0}
+          className="grid h-[52px] w-[52px] flex-none place-items-center rounded-[14px] bg-brand text-white transition enabled:hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-muted"
+          aria-label="Add sport"
         >
           <Plus aria-hidden="true" size={20} />
         </button>

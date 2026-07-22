@@ -172,8 +172,8 @@ input {
   }
 
   .trainer-card-desktop {
-    min-height: 236px;
-    grid-template-columns: 158px minmax(0, 1fr);
+    min-height: 196px;
+    grid-template-columns: 168px minmax(0, 1fr);
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: linear-gradient(145deg, rgba(20, 20, 23, 0.98), rgba(13, 13, 15, 0.98));
@@ -188,7 +188,7 @@ input {
   }
 
   .trainer-card-image-desktop {
-    height: 198px;
+    height: 176px;
   }
 
   .desktop-listing-layout {
@@ -204,6 +204,13 @@ input {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
+  }
+
+  /* Collapsed sidebar: results reclaim the full width and stay two-up, so each
+     horizontal card gets more room (names no longer clip). The compound
+     selector beats the base rule. */
+  .desktop-listing-layout.desktop-listing-layout--collapsed {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .desktop-profile-layout {

@@ -10,23 +10,27 @@ export function StoryCard({
   href,
 }: {
   story: Story;
-  size?: "large" | "compact" | "profile";
+  size?: "large" | "compact" | "profile" | "banner";
   /** When set, the whole card links here (a story detail page). */
   href?: string;
 }) {
   const sizeClass =
-    size === "large"
-      ? "h-[236px] w-[342px] md:h-[300px] md:w-auto"
-      : size === "profile"
-        ? "h-[280px] w-[330px] md:h-[340px] md:w-[390px]"
-        : "h-[210px] w-[250px]";
+    size === "banner"
+      ? "h-[220px] w-full snap-start md:h-[260px] lg:h-[280px] lg:w-[calc(50%_-_8px)]"
+      : size === "large"
+        ? "h-[236px] w-[342px] md:h-[300px] md:w-auto"
+        : size === "profile"
+          ? "h-[280px] w-[330px] md:h-[340px] md:w-[390px]"
+          : "h-[210px] w-[250px]";
 
   const sizes =
-    size === "large"
-      ? "(min-width: 1024px) 360px, 342px"
-      : size === "profile"
-        ? "(min-width: 768px) 390px, 330px"
-        : "250px";
+    size === "banner"
+      ? "(min-width: 1024px) 50vw, 100vw"
+      : size === "large"
+        ? "(min-width: 1024px) 360px, 342px"
+        : size === "profile"
+          ? "(min-width: 768px) 390px, 330px"
+          : "250px";
 
   const inner = (
     <>

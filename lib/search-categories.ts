@@ -9,9 +9,10 @@ export type SearchCategory = {
   shortLabel: string;
   description: string;
   tint: string;
-  /** Seed-data specialties this category maps onto for legacy filtering. */
-  specs: string[];
 };
+
+/** The id of the category whose selection reveals the sports picker. */
+export const SPORT_CATEGORY_ID = "sport";
 
 export const searchCategories: SearchCategory[] = [
   {
@@ -20,15 +21,13 @@ export const searchCategories: SearchCategory[] = [
     shortLabel: "Gym",
     description: "Strength, fat loss, muscle gain",
     tint: "#F02D28",
-    specs: ["Strength", "Weight loss"],
   },
   {
-    id: "sport",
+    id: SPORT_CATEGORY_ID,
     label: "Sports Coach",
     shortLabel: "Sports",
     description: "Cricket, football, tennis, athletics",
     tint: "#3B8CFF",
-    specs: ["Sports", "Boxing"],
   },
   {
     id: "yoga",
@@ -36,7 +35,6 @@ export const searchCategories: SearchCategory[] = [
     shortLabel: "Yoga",
     description: "Flexibility, mobility, group energy",
     tint: "#A05CFF",
-    specs: ["Yoga"],
   },
   {
     id: "diet",
@@ -44,7 +42,6 @@ export const searchCategories: SearchCategory[] = [
     shortLabel: "Nutrition",
     description: "Meal plans, weight management",
     tint: "#1FCB6B",
-    specs: ["Nutrition", "Weight loss"],
   },
 ];
 
@@ -70,15 +67,35 @@ export function categoryById(id: string) {
   return searchCategories.find((category) => category.id === id) ?? null;
 }
 
-export function categoryIdsToSpecs(ids: string[]) {
-  return Array.from(
-    new Set(
-      searchCategories
-        .filter((category) => ids.includes(category.id))
-        .flatMap((category) => category.specs),
-    ),
-  );
+/** Map category ids to their human labels (for search text + chips). */
+export function categoryLabels(ids: string[]) {
+  return ids
+    .map((id) => categoryById(id)?.label)
+    .filter((label): label is string => Boolean(label));
 }
+
+/**
+ * Sports offered as quick-add suggestions while a Sports Coach types the sports
+ * they coach. Trainers can add anything else by typing it — this is only a
+ * starter set, and the marketplace's known sports are whatever trainers enter.
+ */
+export const sportSuggestions = [
+  "Cricket",
+  "Football",
+  "Tennis",
+  "Badminton",
+  "Basketball",
+  "Athletics",
+  "Swimming",
+  "Boxing",
+  "MMA",
+  "Table Tennis",
+  "Hockey",
+  "Volleyball",
+  "Kabaddi",
+  "Skating",
+  "Cycling",
+];
 
 /** Suggestions offered while a trainer types their own specialties. */
 export const specialtySuggestions = [

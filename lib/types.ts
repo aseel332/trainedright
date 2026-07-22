@@ -24,7 +24,11 @@ export type Trainer = {
   instagram: string;
   x: string;
   youtube: string;
-  specialties: string[];
+  /** Raw search-category ids the trainer opted into (e.g. ["gym","sport"]). */
+  categories: string[];
+  /** The sports a Sports Coach coaches (only meaningful with the "sport" category). */
+  sports: string[];
+  /** The trainer's own free-text specialties, shown as tags on cards/detail. */
   tags: string[];
   badges: TrainerBadge[];
   testimonial: string;

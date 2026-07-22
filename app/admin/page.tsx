@@ -80,6 +80,7 @@ export default async function AdminPage() {
       yearsExperience: profile.yearsExperience,
       specialties: profile.specialties,
       searchCategories: profile.searchCategories,
+      sports: profile.sports,
       avatarUrl: profile.avatarUrl,
       planCount: profile.plans.length,
       credentialCount: profile.credentials.length,

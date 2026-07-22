@@ -45,6 +45,7 @@ export type AdminTrainerRow = {
   yearsExperience: string;
   specialties: string[];
   searchCategories: string[];
+  sports: string[];
   avatarUrl: string;
   planCount: number;
   credentialCount: number;
@@ -280,6 +281,20 @@ function TrainerCard({
                   className="rounded-full border border-white/10 px-2.5 py-0.5 text-[11px] font-bold text-soft"
                 >
                   {specialty}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {trainer.sports.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-bold text-muted">Sports:</span>
+              {trainer.sports.map((sport) => (
+                <span
+                  key={sport}
+                  className="rounded-full border border-brand/30 bg-brand/10 px-2.5 py-0.5 text-[11px] font-bold text-soft"
+                >
+                  {sport}
                 </span>
               ))}
             </div>

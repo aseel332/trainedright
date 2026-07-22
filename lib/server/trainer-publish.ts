@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { categoryIdsToSpecs, stateForCity } from "@/lib/search-categories";
+import { stateForCity } from "@/lib/search-categories";
 import { parseVideoLink } from "@/lib/media-links";
 import { draftPricingItems } from "@/lib/pricing";
 import { createAdminSupabaseClient } from "@/lib/server/supabase-admin";
@@ -288,9 +288,13 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
     x: profile.x.trim(),
     youtube: profile.youtube.trim(),
     // The public listing filters by category through `specialties`, so that
-    // column carries the fixed taxonomy. The trainer's own free-text
-    // specialties stay searchable as `tags`.
-    specialties: categoryIdsToSpecs(profile.searchCategories),
+    // column carries the raw category ids the trainer opted into. The trainer's
+    // own free-text specialties stay searchable/displayed as `tags`.
+    specialties: profile.searchCategories,
+    // The specific sports a Sports Coach coaches (empty for everyone else).
+    // Dropped + retried by upsertTrainerRow until the sports column migration
+    // is applied.
+    sports: profile.sports,
     tags: profile.specialties,
     badges: [] as string[],
     testimonial: listingTestimonial,

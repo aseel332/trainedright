@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { TrainerListingClient } from "@/components/trainer-listing-client";
-import { getTrainers } from "@/lib/server/data";
+import { getStories, getTrainers } from "@/lib/server/data";
 import { searchCategories } from "@/lib/search-categories";
 
 export const metadata: Metadata = {
@@ -16,20 +16,30 @@ export default async function TrainersPage({
   const params = await searchParams;
   const query = typeof params.q === "string" ? params.q : "";
   const city = typeof params.city === "string" ? params.city : "";
-  const cat =
-    typeof params.cat === "string" &&
-    searchCategories.some((category) => category.id === params.cat)
+  // `cat` may be comma-separated (e.g. from the home hero: ?cat=gym,sport).
+  const rawCats = Array.isArray(params.cat)
+    ? params.cat.join(",")
+    : typeof params.cat === "string"
       ? params.cat
       : "";
-  const trainers = await getTrainers();
+  const initialCategories = Array.from(
+    new Set(
+      rawCats
+        .split(",")
+        .map((value) => value.trim())
+        .filter((id) => searchCategories.some((category) => category.id === id)),
+    ),
+  );
+  const [trainers, stories] = await Promise.all([getTrainers(), getStories()]);
 
   return (
     <main className="min-h-screen bg-background pb-14 text-white">
       <TrainerListingClient
         trainers={trainers}
+        stories={stories}
         initialQuery={query}
         initialCity={city}
-        initialCategory={cat}
+        initialCategories={initialCategories}
       />
     </main>
   );

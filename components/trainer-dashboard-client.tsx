@@ -43,6 +43,7 @@ import {
   CredentialsEditor,
   PhotosEditor,
   PricingEditor,
+  SportsEditor,
   StorefrontEditor,
 } from "@/components/trainer-onboarding-client";
 import { StoriesEditor } from "@/components/trainer-stories-editor";
@@ -52,6 +53,7 @@ import type {
 } from "@/lib/link-requests";
 import type { TrainerAnalytics } from "@/lib/types";
 import {
+  SPORT_CATEGORY_ID,
   cityOptions,
   searchCategories,
   stateForCity,
@@ -1220,6 +1222,9 @@ function ProfileEditor({
                             (id) => id !== category.id,
                           )
                         : [...profile.searchCategories, category.id],
+                      ...(active && category.id === SPORT_CATEGORY_ID
+                        ? { sports: [] }
+                        : {}),
                     })
                   }
                   className={`rounded-full border px-3.5 py-2 text-[12px] font-extrabold transition ${
@@ -1233,6 +1238,22 @@ function ProfileEditor({
               );
             })}
           </div>
+
+          {profile.searchCategories.includes(SPORT_CATEGORY_ID) ? (
+            <div className="mt-3 rounded-[14px] border border-white/10 bg-black/20 p-4">
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted">
+                Sports you coach
+                <span className="ml-1 text-brand-light">*</span>
+              </p>
+              <p className="mb-3 mt-1 text-[12px] font-medium leading-5 text-muted">
+                Clients search and filter Sports Coaches by these.
+              </p>
+              <SportsEditor
+                sports={profile.sports}
+                onChange={(sports) => update({ sports })}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

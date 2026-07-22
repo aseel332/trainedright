@@ -13,26 +13,28 @@ import {
   MapPin,
   Search,
   SlidersHorizontal,
-  Target,
   Trophy,
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { StoryCard } from "@/components/story-card";
 import { TrainerCard } from "@/components/trainer-card";
-import { filterAndSortTrainers, formatPriceInr } from "@/lib/trainer-utils";
+import { filterAndSortTrainers } from "@/lib/trainer-utils";
 import {
-  categoryIdsToSpecs,
+  SPORT_CATEGORY_ID,
+  categoryLabels,
   cityOptions,
   searchCategories,
 } from "@/lib/search-categories";
-import type { Trainer, TrainerSort } from "@/lib/types";
+import type { Story, Trainer, TrainerSort } from "@/lib/types";
 
-type PreferenceDialog = "onboarding" | "city" | "goal" | null;
+type PreferenceDialog = "onboarding" | "city" | "sports" | null;
 
 const STORAGE_KEYS = {
   onboarded: "tr_onboarded",
   city: "tr_city",
-  goals: "tr_goals",
+  categories: "tr_categories",
+  sports: "tr_sports",
 };
 
 const categoryIcons: Record<string, typeof Dumbbell> = {
@@ -49,56 +51,56 @@ const sortOptions: { id: TrainerSort; label: string }[] = [
   { id: "price", label: "Price: low to high" },
 ];
 
-const priceOptions = [
-  { label: "Any", value: 0 },
-  { label: "Under ₹700", value: 700 },
-  { label: "Under ₹900", value: 900 },
-  { label: "Under ₹1000", value: 1000 },
-];
-
 export function TrainerListingClient({
   trainers,
+  stories = [],
   initialQuery = "",
   initialCity = "",
-  initialCategory = "",
+  initialCategories = [],
 }: {
   trainers: Trainer[];
+  stories?: Story[];
   initialQuery?: string;
   initialCity?: string;
-  initialCategory?: string;
+  initialCategories?: string[];
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [sort, setSort] = useState<TrainerSort>("recommended");
-  const [specs, setSpecs] = useState<string[]>(() =>
-    initialCategory ? categoryIdsToSpecs([initialCategory]) : [],
-  );
-  const [maxPrice, setMaxPrice] = useState(0);
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [city, setCity] = useState(initialCity);
-  const [selectedGoals, setSelectedGoals] = useState<string[]>(
-    initialCategory ? [initialCategory] : [],
-  );
+  const [categories, setCategories] = useState<string[]>(initialCategories);
+  const [sports, setSports] = useState<string[]>([]);
+  const [specialties, setSpecialties] = useState<string[]>([]);
+  // Desktop sidebar starts collapsed so results get the full width; the mobile
+  // sheet is a separate toggle.
+  const [filtersCollapsed, setFiltersCollapsed] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [dialog, setDialog] = useState<PreferenceDialog>(null);
 
   // Load saved preferences once. URL params always win, and the first-visit
   // dialog never opens when the visitor arrived with an explicit choice.
   useEffect(() => {
-    const cameWithIntent = Boolean(initialCity || initialCategory);
+    const cameWithIntent = Boolean(initialCity || initialCategories.length > 0);
 
     const timeoutId = window.setTimeout(() => {
       try {
         const storedCity = localStorage.getItem(STORAGE_KEYS.city);
-        const storedGoals = parseStoredGoals(
-          localStorage.getItem(STORAGE_KEYS.goals),
+        const storedCategories = parseStoredList(
+          // `tr_goals` is the pre-overhaul key; read it once for continuity.
+          localStorage.getItem(STORAGE_KEYS.categories) ??
+            localStorage.getItem("tr_goals"),
+          (id) => searchCategories.some((category) => category.id === id),
+        );
+        const storedSports = parseStoredList(
+          localStorage.getItem(STORAGE_KEYS.sports),
         );
 
         if (!initialCity && storedCity) {
           setCity(storedCity);
         }
 
-        if (!initialCategory && storedGoals.length > 0) {
-          setSelectedGoals(storedGoals);
-          setSpecs(categoryIdsToSpecs(storedGoals));
+        if (initialCategories.length === 0 && storedCategories.length > 0) {
+          setCategories(storedCategories);
+          setSports(storedSports);
         }
 
         if (cameWithIntent) {
@@ -106,11 +108,16 @@ export function TrainerListingClient({
           if (initialCity) {
             localStorage.setItem(STORAGE_KEYS.city, initialCity);
           }
-          if (initialCategory) {
+          if (initialCategories.length > 0) {
             localStorage.setItem(
-              STORAGE_KEYS.goals,
-              JSON.stringify([initialCategory]),
+              STORAGE_KEYS.categories,
+              JSON.stringify(initialCategories),
             );
+          }
+          // Arriving as a Sports Coach seeker (e.g. from the home hero) drops
+          // the visitor straight into narrowing by sport.
+          if (initialCategories.includes(SPORT_CATEGORY_ID)) {
+            setDialog("sports");
           }
         } else if (localStorage.getItem(STORAGE_KEYS.onboarded) !== "1") {
           setDialog("onboarding");
@@ -126,11 +133,34 @@ export function TrainerListingClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const specialities = useMemo(
+  // The marketplace's known sports are whatever trainers entered at onboarding.
+  const knownSports = useMemo(
     () =>
-      Array.from(new Set(trainers.flatMap((trainer) => trainer.specialties))),
+      Array.from(new Set(trainers.flatMap((trainer) => trainer.sports)))
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)),
     [trainers],
   );
+
+  // The speciality filter is sourced from trainers' own free-text tags, never
+  // from the category taxonomy.
+  const specialityOptions = useMemo(
+    () =>
+      Array.from(new Set(trainers.flatMap((trainer) => trainer.tags))).filter(
+        Boolean,
+      ),
+    [trainers],
+  );
+
+  // Global stories link to the article on their author's profile, so we need
+  // each story's trainer slug (stories only carry the trainer id).
+  const slugByTrainerId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const trainer of trainers) {
+      map.set(trainer.id, trainer.slug);
+    }
+    return map;
+  }, [trainers]);
 
   const results = useMemo(
     () =>
@@ -138,42 +168,30 @@ export function TrainerListingClient({
         query,
         city,
         sort,
-        specs,
-        maxPrice,
+        categories,
+        sports,
+        specialties,
       }),
-    [city, maxPrice, query, sort, specs, trainers],
+    [trainers, query, city, sort, categories, sports, specialties],
   );
 
-  const activeGoalLabel = useMemo(
-    () => formatGoalLabel(selectedGoals),
-    [selectedGoals],
-  );
-
-  const filterCount = specs.length + (maxPrice ? 1 : 0);
-
+  const activeCount = categories.length + sports.length + specialties.length;
   const cityLabel = city || "All cities";
+  const sportSelected = categories.includes(SPORT_CATEGORY_ID);
 
-  function toggleSpec(spec: string) {
-    setSpecs((current) =>
-      current.includes(spec)
-        ? current.filter((item) => item !== spec)
-        : [...current, spec],
-    );
-  }
-
-  // A full reset clears everything — including goal-applied specialty
-  // filters — so nobody gets stuck inside a stored goal.
-  function clearFilters() {
-    setSpecs([]);
-    setMaxPrice(0);
-    setSelectedGoals([]);
-  }
-
-  function persist(nextCity: string, nextGoals: string[]) {
+  function persist(
+    nextCity: string,
+    nextCategories: string[],
+    nextSports: string[],
+  ) {
     try {
       localStorage.setItem(STORAGE_KEYS.onboarded, "1");
       localStorage.setItem(STORAGE_KEYS.city, nextCity);
-      localStorage.setItem(STORAGE_KEYS.goals, JSON.stringify(nextGoals));
+      localStorage.setItem(
+        STORAGE_KEYS.categories,
+        JSON.stringify(nextCategories),
+      );
+      localStorage.setItem(STORAGE_KEYS.sports, JSON.stringify(nextSports));
     } catch {
       // Local storage can be blocked; UI state still works.
     }
@@ -181,15 +199,53 @@ export function TrainerListingClient({
 
   function saveCity(nextCity: string) {
     setCity(nextCity);
-    persist(nextCity, selectedGoals);
+    persist(nextCity, categories, sports);
   }
 
-  // Selecting goals seeds the specialty filters once; after that the chips
-  // are fully in the user's hands.
-  function saveGoals(nextGoals: string[]) {
-    setSelectedGoals(nextGoals);
-    setSpecs(categoryIdsToSpecs(nextGoals));
-    persist(city, nextGoals);
+  // Toggling a coach type never touches the speciality filter — the two are
+  // fully decoupled. Turning the sport category on opens the sports picker;
+  // turning it off clears any chosen sports.
+  function toggleCategory(id: string) {
+    const active = categories.includes(id);
+    const nextCategories = active
+      ? categories.filter((item) => item !== id)
+      : [...categories, id];
+
+    let nextSports = sports;
+    if (id === SPORT_CATEGORY_ID) {
+      if (active) {
+        nextSports = [];
+        setSports(nextSports);
+      } else {
+        setDialog("sports");
+      }
+    }
+
+    setCategories(nextCategories);
+    persist(city, nextCategories, nextSports);
+  }
+
+  function toggleSport(sport: string) {
+    const next = sports.includes(sport)
+      ? sports.filter((item) => item !== sport)
+      : [...sports, sport];
+    setSports(next);
+    persist(city, categories, next);
+  }
+
+  function toggleSpecialty(tag: string) {
+    setSpecialties((current) =>
+      current.includes(tag)
+        ? current.filter((item) => item !== tag)
+        : [...current, tag],
+    );
+  }
+
+  function clearAll() {
+    setCategories([]);
+    setSports([]);
+    setSpecialties([]);
+    persist(city, [], []);
   }
 
   function skipOnboarding() {
@@ -201,32 +257,36 @@ export function TrainerListingClient({
     setDialog(null);
   }
 
-  const panel = (
-    <FilterPanel
-      specialities={specialities}
-      specs={specs}
-      maxPrice={maxPrice}
-      selectedGoals={selectedGoals}
-      onToggleGoal={(goalId) => {
-        const nextGoals = selectedGoals.includes(goalId)
-          ? selectedGoals.filter((id) => id !== goalId)
-          : [...selectedGoals, goalId];
-        saveGoals(nextGoals);
-      }}
-      onToggleSpec={toggleSpec}
-      onPrice={setMaxPrice}
-      onClear={clearFilters}
-    />
-  );
+  const panelProps = {
+    categories,
+    sports,
+    specialties,
+    specialityOptions,
+    sportSelected,
+    onToggleCategory: toggleCategory,
+    onEditSports: () => setDialog("sports"),
+    onRemoveSport: toggleSport,
+    onToggleSpecialty: toggleSpecialty,
+    onClear: clearAll,
+  };
 
   return (
     <>
-      <div className="desktop-listing-layout mx-auto grid max-w-7xl gap-6 px-4 py-5 sm:px-6 lg:px-0 lg:py-8">
-        <aside className="hidden lg:block">
-          <div className="sticky top-8 rounded-[18px] border border-white/10 bg-panel p-4">
-            {panel}
-          </div>
-        </aside>
+      <div
+        className={`desktop-listing-layout ${
+          filtersCollapsed ? "desktop-listing-layout--collapsed" : ""
+        } mx-auto grid max-w-7xl gap-6 px-4 py-5 sm:px-6 lg:px-0 lg:py-8`}
+      >
+        {!filtersCollapsed ? (
+          <aside className="hidden lg:block">
+            <div className="sticky top-8 rounded-[18px] border border-white/10 bg-panel p-4">
+              <FilterPanel
+                {...panelProps}
+                onCollapse={() => setFiltersCollapsed(true)}
+              />
+            </div>
+          </aside>
+        ) : null}
 
         <section className="min-w-0">
           <div className="mb-5 border-b border-white/10 pb-5">
@@ -255,35 +315,34 @@ export function TrainerListingClient({
                   />
                 </button>
               </div>
-              <div className="hidden flex-none items-center md:flex">
-                <label className="relative inline-flex h-11 items-center gap-2 rounded-[13px] border border-white/10 bg-panel pl-3 pr-8 text-[12px] font-extrabold text-white">
-                  <ArrowDownWideNarrow
-                    aria-hidden="true"
-                    className="text-brand-light"
-                    size={15}
-                  />
-                  <select
-                    value={sort}
-                    onChange={(event) =>
-                      setSort(event.target.value as TrainerSort)
-                    }
-                    className="appearance-none bg-transparent font-extrabold text-white outline-none [&>option]:bg-[#141417]"
-                    aria-label="Sort trainers"
-                  >
-                    {sortOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    aria-hidden="true"
-                    className="pointer-events-none absolute right-3 text-brand-light"
-                    size={15}
-                  />
-                </label>
-              </div>
             </div>
+
+            {stories.length > 0 ? (
+              <div className="mt-5">
+                <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-muted">
+                  Stories from our coaches
+                </p>
+                <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 scrollbar-none">
+                  {stories.map((story) => {
+                    const slug = story.trainerId
+                      ? slugByTrainerId.get(story.trainerId)
+                      : undefined;
+                    return (
+                      <StoryCard
+                        key={story.id}
+                        story={story}
+                        size="banner"
+                        href={
+                          slug
+                            ? `/trainers/${slug}/stories/${story.id}`
+                            : undefined
+                        }
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
 
             <div className="relative mt-4">
               <Search
@@ -294,38 +353,23 @@ export function TrainerListingClient({
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search name or speciality"
+                placeholder="Search name, sport or speciality"
                 className="h-14 w-full rounded-[16px] border border-white/10 bg-panel pl-12 pr-4 text-[15px] font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand/70 focus:bg-panel-strong"
               />
             </div>
 
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-              <label className="relative inline-flex h-10 flex-none items-center gap-2 rounded-full border border-brand/30 bg-brand/10 pl-3 pr-8 text-[12px] font-extrabold text-white md:hidden">
-                <ArrowDownWideNarrow
-                  aria-hidden="true"
-                  className="text-brand-light"
-                  size={15}
-                />
-                <select
-                  value={sort}
-                  onChange={(event) =>
-                    setSort(event.target.value as TrainerSort)
-                  }
-                  className="max-w-[142px] appearance-none bg-transparent font-extrabold text-white outline-none [&>option]:bg-[#141417]"
-                  aria-label="Sort trainers"
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {filtersCollapsed ? (
+                <button
+                  type="button"
+                  onClick={() => setFiltersCollapsed(false)}
+                  className="hidden h-10 flex-none items-center gap-2 rounded-full border border-white/10 bg-panel px-3.5 text-[12px] font-extrabold text-white transition hover:border-brand/40 lg:inline-flex"
                 >
-                  {sortOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  aria-hidden="true"
-                  className="pointer-events-none absolute right-3 text-brand-light"
-                  size={15}
-                />
-              </label>
+                  <SlidersHorizontal aria-hidden="true" size={15} />
+                  Filters
+                  <FilterBadge count={activeCount} />
+                </button>
+              ) : null}
 
               <button
                 type="button"
@@ -334,97 +378,50 @@ export function TrainerListingClient({
               >
                 <SlidersHorizontal aria-hidden="true" size={15} />
                 Filters
-                {filterCount > 0 ? (
-                  <span className="grid min-h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[9px]">
-                    {filterCount}
-                  </span>
-                ) : null}
+                <FilterBadge count={activeCount} />
               </button>
 
-              <button
-                type="button"
-                onClick={() => setDialog("goal")}
-                className={`inline-flex h-10 max-w-[210px] flex-none items-center gap-2 rounded-full border px-3.5 text-[12px] font-extrabold transition ${
-                  selectedGoals.length > 0
-                    ? "border-brand/40 bg-brand/10 text-white"
-                    : "border-white/10 bg-panel text-soft hover:text-white"
-                }`}
-              >
-                <Target
-                  aria-hidden="true"
-                  className="flex-none text-brand-light"
-                  size={15}
+              <SortControl sort={sort} onSort={setSort} />
+
+              {categories.map((id) => (
+                <FilterChip
+                  key={`cat-${id}`}
+                  label={categoryLabels([id])[0] ?? id}
+                  onRemove={() => toggleCategory(id)}
                 />
-                <span className="truncate">{activeGoalLabel}</span>
-                {selectedGoals.length > 0 ? (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    aria-label="Clear goal"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      saveGoals([]);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.stopPropagation();
-                        saveGoals([]);
-                      }
-                    }}
-                    className="grid h-5 w-5 flex-none place-items-center rounded-full bg-white/10 transition hover:bg-brand"
-                  >
-                    <X aria-hidden="true" size={11} />
-                  </span>
-                ) : null}
-              </button>
+              ))}
+              {sports.map((sport) => (
+                <FilterChip
+                  key={`sport-${sport}`}
+                  label={sport}
+                  onRemove={() => toggleSport(sport)}
+                />
+              ))}
+              {specialties.map((tag) => (
+                <FilterChip
+                  key={`spec-${tag}`}
+                  label={tag}
+                  onRemove={() => toggleSpecialty(tag)}
+                />
+              ))}
 
-              {specialities.slice(0, 6).map((chip) => {
-                const active = specs.includes(chip);
-                return (
-                  <button
-                    type="button"
-                    key={chip}
-                    onClick={() => toggleSpec(chip)}
-                    className={`h-10 flex-none rounded-full border px-3.5 text-[12px] font-extrabold transition ${
-                      active
-                        ? "border-brand bg-brand text-white"
-                        : "border-white/10 bg-panel text-soft hover:text-white"
-                    }`}
-                  >
-                    {chip}
-                  </button>
-                );
-              })}
+              {activeCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="h-10 flex-none rounded-full px-2 text-[12px] font-bold text-brand-light transition hover:text-white"
+                >
+                  Clear all
+                </button>
+              ) : null}
             </div>
           </div>
 
-          <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-muted">
-                <span className="font-extrabold text-white">
-                  {results.length}
-                </span>{" "}
-                coaches matched
-              </p>
-              <p className="mt-1 text-[12px] font-semibold text-muted">
-                {selectedGoals.length === 0
-                  ? city
-                    ? `Showing available trainers in ${city}`
-                    : "Showing available trainers across all cities"
-                  : city
-                    ? `${activeGoalLabel} in ${city}`
-                    : `${activeGoalLabel} across all cities`}
-              </p>
-            </div>
-            {filterCount > 0 ? (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="self-start rounded-full border border-brand/30 bg-brand/10 px-3 py-2 text-[12px] font-bold text-brand-light md:self-auto"
-              >
-                Reset all filters
-              </button>
-            ) : null}
+          <div className="mb-4">
+            <p className="text-sm font-semibold text-muted">
+              <span className="font-extrabold text-white">{results.length}</span>{" "}
+              coaches matched
+            </p>
           </div>
 
           {results.length > 0 ? (
@@ -446,13 +443,15 @@ export function TrainerListingClient({
               <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted">
                 Try clearing a filter or searching for a different speciality.
               </p>
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="mt-5 rounded-[12px] border border-brand/30 bg-brand/10 px-5 py-3 text-sm font-bold text-brand-light"
-              >
-                Clear all filters
-              </button>
+              {activeCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="mt-5 rounded-[12px] border border-brand/30 bg-brand/10 px-5 py-3 text-sm font-bold text-brand-light"
+                >
+                  Clear all filters
+                </button>
+              ) : null}
             </div>
           )}
         </section>
@@ -480,7 +479,7 @@ export function TrainerListingClient({
                   <X aria-hidden="true" size={18} />
                 </button>
               </div>
-              {panel}
+              <FilterPanel {...panelProps} />
               <button
                 type="button"
                 onClick={() => setFiltersOpen(false)}
@@ -496,14 +495,17 @@ export function TrainerListingClient({
       {dialog === "onboarding" ? (
         <OnboardingDialog
           initialCity={city}
-          initialGoals={selectedGoals}
+          initialCategories={categories}
           onSkip={skipOnboarding}
-          onSave={(nextCity, nextGoals) => {
+          onSave={(nextCity, nextCategories) => {
             setCity(nextCity);
-            setSelectedGoals(nextGoals);
-            setSpecs(categoryIdsToSpecs(nextGoals));
-            persist(nextCity, nextGoals);
-            setDialog(null);
+            setCategories(nextCategories);
+            persist(nextCity, nextCategories, sports);
+            // If they signed up as a Sports Coach seeker, go straight into
+            // narrowing by sport.
+            setDialog(
+              nextCategories.includes(SPORT_CATEGORY_ID) ? "sports" : null,
+            );
           }}
         />
       ) : null}
@@ -519,38 +521,110 @@ export function TrainerListingClient({
         />
       ) : null}
 
-      {dialog === "goal" ? (
-        <GoalDialog
-          initialGoals={selectedGoals}
+      {dialog === "sports" ? (
+        <SportsDialog
+          knownSports={knownSports}
+          selected={sports}
+          onToggle={toggleSport}
           onClose={() => setDialog(null)}
-          onSave={(goals) => {
-            saveGoals(goals);
-            setDialog(null);
-          }}
         />
       ) : null}
     </>
   );
 }
 
-function FilterPanel({
-  specialities,
-  specs,
-  maxPrice,
-  selectedGoals,
-  onToggleGoal,
-  onToggleSpec,
-  onPrice,
-  onClear,
+function SortControl({
+  sort,
+  onSort,
 }: {
-  specialities: string[];
-  specs: string[];
-  maxPrice: number;
-  selectedGoals: string[];
-  onToggleGoal: (goalId: string) => void;
-  onToggleSpec: (spec: string) => void;
-  onPrice: (price: number) => void;
+  sort: TrainerSort;
+  onSort: (sort: TrainerSort) => void;
+}) {
+  return (
+    <label className="relative inline-flex h-10 flex-none items-center gap-2 rounded-full border border-white/10 bg-panel pl-3.5 pr-8 text-[12px] font-extrabold text-white">
+      <ArrowDownWideNarrow
+        aria-hidden="true"
+        className="text-brand-light"
+        size={15}
+      />
+      <select
+        value={sort}
+        onChange={(event) => onSort(event.target.value as TrainerSort)}
+        className="max-w-[132px] appearance-none bg-transparent font-extrabold text-white outline-none [&>option]:bg-[#141417] sm:max-w-none"
+        aria-label="Sort trainers"
+      >
+        {sortOptions.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown
+        aria-hidden="true"
+        className="pointer-events-none absolute right-3 text-brand-light"
+        size={15}
+      />
+    </label>
+  );
+}
+
+function FilterBadge({ count }: { count: number }) {
+  if (count <= 0) {
+    return null;
+  }
+  return (
+    <span className="grid min-h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[9px]">
+      {count}
+    </span>
+  );
+}
+
+function FilterChip({
+  label,
+  onRemove,
+}: {
+  label: string;
+  onRemove: () => void;
+}) {
+  return (
+    <span className="inline-flex h-10 flex-none items-center gap-1.5 rounded-full border border-brand/40 bg-brand/10 pl-3.5 pr-2 text-[12px] font-extrabold text-white">
+      {label}
+      <button
+        type="button"
+        aria-label={`Remove ${label}`}
+        onClick={onRemove}
+        className="grid h-5 w-5 place-items-center rounded-full bg-white/10 text-soft transition hover:bg-brand hover:text-white"
+      >
+        <X aria-hidden="true" size={11} />
+      </button>
+    </span>
+  );
+}
+
+function FilterPanel({
+  categories,
+  sports,
+  specialties,
+  specialityOptions,
+  sportSelected,
+  onToggleCategory,
+  onEditSports,
+  onRemoveSport,
+  onToggleSpecialty,
+  onClear,
+  onCollapse,
+}: {
+  categories: string[];
+  sports: string[];
+  specialties: string[];
+  specialityOptions: string[];
+  sportSelected: boolean;
+  onToggleCategory: (id: string) => void;
+  onEditSports: () => void;
+  onRemoveSport: (sport: string) => void;
+  onToggleSpecialty: (tag: string) => void;
   onClear: () => void;
+  onCollapse?: () => void;
 }) {
   return (
     <div>
@@ -558,13 +632,25 @@ function FilterPanel({
         <h2 className="font-display text-[22px] font-black text-white">
           Filters
         </h2>
-        <button
-          type="button"
-          onClick={onClear}
-          className="text-sm font-bold text-brand-light"
-        >
-          Clear all
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onClear}
+            className="text-sm font-bold text-brand-light"
+          >
+            Clear all
+          </button>
+          {onCollapse ? (
+            <button
+              type="button"
+              onClick={onCollapse}
+              aria-label="Collapse filters"
+              className="hidden h-8 w-8 place-items-center rounded-[10px] border border-white/10 bg-panel text-white transition hover:border-brand/40 lg:grid"
+            >
+              <X aria-hidden="true" size={16} />
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="mb-6">
@@ -574,12 +660,12 @@ function FilterPanel({
         <div className="grid grid-cols-1 gap-2">
           {searchCategories.map((category) => {
             const Icon = categoryIcons[category.id] ?? Dumbbell;
-            const active = selectedGoals.includes(category.id);
+            const active = categories.includes(category.id);
             return (
               <button
                 key={category.id}
                 type="button"
-                onClick={() => onToggleGoal(category.id)}
+                onClick={() => onToggleCategory(category.id)}
                 className={`flex items-center gap-3 rounded-[13px] border p-3 text-left transition ${
                   active
                     ? "border-brand/60 bg-brand/10"
@@ -613,71 +699,176 @@ function FilterPanel({
         </div>
       </div>
 
-      <div className="mb-6">
-        <p className="mb-3 text-[10px] font-extrabold uppercase text-muted">
-          Speciality
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {specialities.map((spec) => {
-            const active = specs.includes(spec);
+      {sportSelected ? (
+        <div className="mb-6">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-[10px] font-extrabold uppercase text-muted">
+              Sports
+            </p>
+            <button
+              type="button"
+              onClick={onEditSports}
+              className="text-[12px] font-bold text-brand-light"
+            >
+              {sports.length > 0 ? "Edit" : "Choose"}
+            </button>
+          </div>
+          {sports.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {sports.map((sport) => (
+                <span
+                  key={sport}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-brand/50 bg-brand/10 py-2 pl-3.5 pr-2 text-[12px] font-extrabold text-white"
+                >
+                  {sport}
+                  <button
+                    type="button"
+                    aria-label={`Remove ${sport}`}
+                    onClick={() => onRemoveSport(sport)}
+                    className="grid h-5 w-5 place-items-center rounded-full bg-white/10 text-soft transition hover:bg-brand hover:text-white"
+                  >
+                    <X aria-hidden="true" size={11} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onEditSports}
+              className="w-full rounded-[13px] border border-dashed border-white/15 bg-panel p-3 text-left text-[12px] font-semibold text-muted transition hover:border-brand/40 hover:text-white"
+            >
+              Showing all sports — tap to narrow to specific sports.
+            </button>
+          )}
+        </div>
+      ) : null}
+
+      {specialityOptions.length > 0 ? (
+        <div className="mb-2">
+          <p className="mb-3 text-[10px] font-extrabold uppercase text-muted">
+            Speciality
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {specialityOptions.map((spec) => {
+              const active = specialties.includes(spec);
+              return (
+                <button
+                  key={spec}
+                  type="button"
+                  onClick={() => onToggleSpecialty(spec)}
+                  className={`rounded-full border px-3.5 py-2 text-[12px] font-bold transition ${
+                    active
+                      ? "border-brand/60 bg-brand/15 text-white"
+                      : "border-white/10 bg-panel text-soft hover:text-white"
+                  }`}
+                >
+                  {spec}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SportsDialog({
+  knownSports,
+  selected,
+  onToggle,
+  onClose,
+}: {
+  knownSports: string[];
+  selected: string[];
+  onToggle: (sport: string) => void;
+  onClose: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const term = query.trim().toLowerCase();
+  const filtered = knownSports.filter((sport) =>
+    sport.toLowerCase().includes(term),
+  );
+
+  return (
+    <DialogFrame title="Which sports?" kicker="Sports Coach" onClose={onClose}>
+      <div className="relative">
+        <Search
+          aria-hidden="true"
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-muted"
+          size={18}
+        />
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search sports"
+          className="h-13 w-full rounded-[14px] border border-white/10 bg-panel py-3.5 pl-12 pr-4 text-sm font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand/60"
+        />
+      </div>
+
+      {filtered.length > 0 ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {filtered.map((sport) => {
+            const active = selected.includes(sport);
             return (
               <button
-                key={spec}
+                key={sport}
                 type="button"
-                onClick={() => onToggleSpec(spec)}
-                className={`rounded-full border px-3.5 py-2 text-[12px] font-bold transition ${
+                onClick={() => onToggle(sport)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2.5 text-[13px] font-extrabold transition ${
                   active
-                    ? "border-brand/60 bg-brand/15 text-white"
-                    : "border-white/10 bg-panel text-soft"
+                    ? "border-brand bg-brand text-white"
+                    : "border-white/10 bg-panel text-soft hover:border-brand/40 hover:text-white"
                 }`}
               >
-                {spec}
+                {sport}
+                {active ? <Check aria-hidden="true" size={14} /> : null}
               </button>
             );
           })}
         </div>
-      </div>
-
-      <div className="mb-6">
-        <p className="mb-3 text-[10px] font-extrabold uppercase text-muted">
-          Max price / session
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          {priceOptions.map((price) => (
-            <button
-              key={price.value}
-              type="button"
-              onClick={() => onPrice(price.value)}
-              className={`rounded-[12px] border px-3 py-3 text-[12px] font-bold transition ${
-                maxPrice === price.value
-                  ? "border-brand/60 bg-brand/15 text-white"
-                  : "border-white/10 bg-panel text-soft"
-              }`}
-            >
-              {price.value === 0 ? price.label : formatPriceInr(price.value)}
-            </button>
-          ))}
+      ) : (
+        <div className="mt-5 rounded-[16px] border border-white/10 bg-panel p-5 text-center">
+          <p className="font-extrabold text-white">
+            {knownSports.length === 0 ? "No sports listed yet" : "No matches"}
+          </p>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            {knownSports.length === 0
+              ? "As sports coaches join, the sports they coach show up here to search."
+              : `Nothing matches “${query.trim()}”. Try another sport.`}
+          </p>
         </div>
-      </div>
-    </div>
+      )}
+
+      <button
+        type="button"
+        onClick={onClose}
+        className="mt-6 h-12 w-full rounded-[14px] bg-brand px-5 text-sm font-extrabold text-white transition"
+      >
+        {selected.length > 0
+          ? `Apply ${selected.length} sport${selected.length > 1 ? "s" : ""}`
+          : "Show all sports coaches"}
+      </button>
+    </DialogFrame>
   );
 }
 
 function OnboardingDialog({
   initialCity,
-  initialGoals,
+  initialCategories,
   onSkip,
   onSave,
 }: {
   initialCity: string;
-  initialGoals: string[];
+  initialCategories: string[];
   onSkip: () => void;
-  onSave: (city: string, goals: string[]) => void;
+  onSave: (city: string, categories: string[]) => void;
 }) {
   const [step, setStep] = useState(0);
   const [city, setCity] = useState(initialCity);
   const [cityQuery, setCityQuery] = useState(initialCity);
-  const [goals, setGoals] = useState(initialGoals);
+  const [categories, setCategories] = useState(initialCategories);
   const canContinue = step === 0 ? Boolean(city) : true;
 
   return (
@@ -685,7 +876,7 @@ function OnboardingDialog({
       title={
         step === 0 ? "Which city are you training in?" : "Who are you looking for?"
       }
-      kicker={step === 0 ? "Step 1 · Your city" : "Step 2 · Your goal"}
+      kicker={step === 0 ? "Step 1 · Your city" : "Step 2 · Coach type"}
       onClose={onSkip}
     >
       <div className="mb-5 flex gap-2">
@@ -713,9 +904,9 @@ function OnboardingDialog({
           }}
         />
       ) : (
-        <GoalStep
-          goals={goals}
-          onToggle={(goalId) => setGoals(toggleValue(goals, goalId))}
+        <CategoryStep
+          categories={categories}
+          onToggle={(id) => setCategories(toggleValue(categories, id))}
         />
       )}
 
@@ -747,14 +938,14 @@ function OnboardingDialog({
             if (step === 0) {
               setStep(1);
             } else {
-              onSave(city, goals);
+              onSave(city, categories);
             }
           }}
           className="h-12 flex-1 rounded-[14px] bg-brand px-5 text-sm font-extrabold text-white transition disabled:bg-white/10 disabled:text-muted"
         >
           {step === 0
             ? "Continue"
-            : goals.length > 0
+            : categories.length > 0
               ? "Show me coaches"
               : "Show me everyone"}
         </button>
@@ -797,43 +988,6 @@ function CityDialog({
       >
         Save city
       </button>
-    </DialogFrame>
-  );
-}
-
-function GoalDialog({
-  initialGoals,
-  onClose,
-  onSave,
-}: {
-  initialGoals: string[];
-  onClose: () => void;
-  onSave: (goals: string[]) => void;
-}) {
-  const [goals, setGoals] = useState(initialGoals);
-
-  return (
-    <DialogFrame title="Edit goal" kicker="Training target" onClose={onClose}>
-      <GoalStep
-        goals={goals}
-        onToggle={(goalId) => setGoals(toggleValue(goals, goalId))}
-      />
-      <div className="mt-6 flex gap-3">
-        <button
-          type="button"
-          onClick={() => onSave([])}
-          className="h-12 rounded-[14px] border border-white/10 bg-panel px-5 text-sm font-extrabold text-soft transition hover:text-white"
-        >
-          Clear goal
-        </button>
-        <button
-          type="button"
-          onClick={() => onSave(goals)}
-          className="h-12 flex-1 rounded-[14px] bg-brand px-5 text-sm font-extrabold text-white transition"
-        >
-          Save goal
-        </button>
-      </div>
     </DialogFrame>
   );
 }
@@ -955,18 +1109,18 @@ function CityStep({
   );
 }
 
-function GoalStep({
-  goals,
+function CategoryStep({
+  categories,
   onToggle,
 }: {
-  goals: string[];
-  onToggle: (goalId: string) => void;
+  categories: string[];
+  onToggle: (id: string) => void;
 }) {
   return (
     <div>
       <div className="grid grid-cols-1 gap-2">
         {searchCategories.map((category) => {
-          const selected = goals.includes(category.id);
+          const selected = categories.includes(category.id);
           const Icon = categoryIcons[category.id] ?? Dumbbell;
           return (
             <button
@@ -1014,14 +1168,17 @@ function GoalStep({
         })}
       </div>
       <p className="mt-4 text-[12px] font-semibold leading-5 text-muted">
-        Picking a goal pre-selects matching specialities — you can change or
-        clear them any time from the filters.
+        Pick the coach types you want — you can narrow by sport and speciality
+        next. Choosing more than one shows all of them.
       </p>
     </div>
   );
 }
 
-function parseStoredGoals(value: string | null) {
+function parseStoredList(
+  value: string | null,
+  isValid?: (item: string) => boolean,
+) {
   if (!value) {
     return [];
   }
@@ -1034,23 +1191,11 @@ function parseStoredGoals(value: string | null) {
 
     return parsed.filter(
       (item): item is string =>
-        typeof item === "string" &&
-        searchCategories.some((category) => category.id === item),
+        typeof item === "string" && (!isValid || isValid(item)),
     );
   } catch {
     return [];
   }
-}
-
-function formatGoalLabel(goalIds: string[]) {
-  if (goalIds.length === 0) {
-    return "Set your goal";
-  }
-
-  return searchCategories
-    .filter((category) => goalIds.includes(category.id))
-    .map((category) => category.shortLabel)
-    .join(", ");
 }
 
 function toggleValue(values: string[], value: string) {
