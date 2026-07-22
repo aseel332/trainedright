@@ -41,6 +41,7 @@ import {
 } from "@/app/trainer/actions";
 import {
   CredentialsEditor,
+  GenderSelector,
   PhotosEditor,
   PricingEditor,
   SportsEditor,
@@ -1167,6 +1168,17 @@ function ProfileEditor({
         </label>
       </div>
 
+      <div className="max-w-xl">
+        <p className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted">
+          Gender
+          <span className="ml-1 text-brand-light">*</span>
+        </p>
+        <GenderSelector
+          value={profile.gender}
+          onChange={(gender) => update({ gender })}
+        />
+      </div>
+
       {/* The card + description editor, shared with onboarding so both places
           edit the profile the same way, with the live preview. */}
       <StorefrontEditor profile={profile} userId={userId} update={update} />
@@ -2054,4 +2066,3 @@ function TransformationsSectionPanel({
 }
 
 /* ------------------------------ Stories ------------------------------ */
-

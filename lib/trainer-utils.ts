@@ -1,4 +1,9 @@
 import { SPORT_CATEGORY_ID, categoryLabels } from "@/lib/search-categories";
+import {
+  isTrainerGenderOption,
+  trainerGenderLabel,
+  type TrainerGenderOptionId,
+} from "@/lib/trainer-profile";
 import type { Trainer, TrainerSort } from "@/lib/types";
 
 export type TrainerQuery = {
@@ -10,6 +15,8 @@ export type TrainerQuery = {
   sports?: string[];
   /** Free-text specialties (tags) to refine by. Independent of categories. */
   specialties?: string[];
+  /** Coach gender ids to include. Empty = all genders. */
+  genders?: TrainerGenderOptionId[];
   sort?: TrainerSort;
   limit?: number;
 };
@@ -58,10 +65,20 @@ export function filterAndSortTrainers(
   const categories = options.categories ?? [];
   const sports = options.sports ?? [];
   const specialties = options.specialties ?? [];
+  const genders = options.genders ?? [];
 
   let result = trainers.filter((trainer) => {
     if (city && trainer.city.trim().toLowerCase() !== city) {
       return false;
+    }
+
+    if (genders.length > 0) {
+      if (!isTrainerGenderOption(trainer.gender)) {
+        return false;
+      }
+      if (!genders.includes(trainer.gender)) {
+        return false;
+      }
     }
 
     if (!matchesCategories(trainer, categories, sports)) {
@@ -82,6 +99,7 @@ export function filterAndSortTrainers(
         trainer.city,
         trainer.state,
         trainer.bio,
+        trainerGenderLabel(trainer.gender),
         ...trainer.tags,
         ...trainer.sports,
         ...categoryLabels(trainer.categories),

@@ -67,6 +67,7 @@ export default async function AdminPage() {
       isLive: Boolean(published?.active),
       email: emailByUserId.get(String(row.user_id)) ?? "",
       displayName: String(row.display_name ?? "") || profile.name,
+      gender: profile.gender,
       approvalStatus: String(row.approval_status ?? "draft"),
       onboardingComplete: Boolean(row.onboarding_complete),
       submittedAt: row.submitted_at ? String(row.submitted_at) : null,

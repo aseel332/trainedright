@@ -21,6 +21,7 @@ import {
   FileText,
   ImagePlus,
   Loader2,
+  Mars,
   MapPin,
   MessageCircle,
   Play,
@@ -31,6 +32,8 @@ import {
   Trash2,
   UserRound,
   Users,
+  Venus,
+  VenusAndMars,
   X,
 } from "lucide-react";
 import { saveTrainerProfile, submitForApproval } from "@/app/trainer/actions";
@@ -55,8 +58,10 @@ import {
   MAX_SPECIALTIES,
   parseProfileDraft,
   profileRequirements,
+  trainerGenderOptions,
   type ProfileCredential,
   type ProfileRequirement,
+  type TrainerGenderOptionId,
   type TrainerProfileDraft,
 } from "@/lib/trainer-profile";
 import { planCadence, planDefaultName } from "@/lib/pricing";
@@ -64,6 +69,7 @@ import { uploadPublicFile } from "@/lib/client/upload";
 
 type StepId =
   | "welcome"
+  | "gender"
   | "location"
   | "categories"
   | "storefront"
@@ -87,6 +93,12 @@ const steps: StepDef[] = [
     kicker: "Let's get you found",
     title: "What should clients call you?",
     tip: "Use the name clients already know you by — the name they'd look for.",
+  },
+  {
+    id: "gender",
+    kicker: "Coach details",
+    title: "Select your gender.",
+    tip: "Clients can filter coaches by gender when that matters for their comfort and goals.",
   },
   {
     id: "categories",
@@ -212,6 +224,9 @@ export function TrainerOnboardingClient({
   function stepIsBlocked() {
     if (step.id === "welcome") {
       return profile.name.trim().length < 2;
+    }
+    if (step.id === "gender") {
+      return !profile.gender;
     }
     if (step.id === "categories") {
       if (profile.searchCategories.length === 0) {
@@ -365,6 +380,17 @@ export function TrainerOnboardingClient({
                   value={profile.name}
                   onChange={(name) => update({ name })}
                   placeholder="e.g. your full name"
+                />
+              </Field>
+            </div>
+          ) : null}
+
+          {step.id === "gender" ? (
+            <div className="max-w-xl space-y-5">
+              <Field label="Gender" required>
+                <GenderSelector
+                  value={profile.gender}
+                  onChange={(gender) => update({ gender })}
                 />
               </Field>
             </div>
@@ -706,6 +732,62 @@ function IconInput({
         className="h-[52px] w-full rounded-[14px] border border-white/10 bg-panel pl-11 pr-4 text-[15px] font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand"
       />
     </span>
+  );
+}
+
+const genderIcons: Record<TrainerGenderOptionId, typeof UserRound> = {
+  female: Venus,
+  male: Mars,
+  non_binary: VenusAndMars,
+  prefer_not_to_say: UserRound,
+};
+
+export function GenderSelector({
+  value,
+  onChange,
+}: {
+  value: TrainerProfileDraft["gender"];
+  onChange: (value: TrainerGenderOptionId) => void;
+}) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {trainerGenderOptions.map((option) => {
+        const active = value === option.id;
+        const Icon = genderIcons[option.id];
+        return (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => onChange(option.id)}
+            className={`flex min-h-[56px] items-center gap-3 rounded-[14px] border p-3 text-left transition ${
+              active
+                ? "border-brand/60 bg-brand/10"
+                : "border-white/10 bg-panel hover:border-white/25"
+            }`}
+          >
+            <span
+              className={`grid h-9 w-9 flex-none place-items-center rounded-[10px] ${
+                active ? "bg-brand text-white" : "bg-white/5 text-brand-light"
+              }`}
+            >
+              <Icon aria-hidden="true" size={17} />
+            </span>
+            <span className="min-w-0 flex-1 text-[13px] font-extrabold text-white">
+              {option.label}
+            </span>
+            <span
+              className={`grid h-5 w-5 flex-none place-items-center rounded-full border ${
+                active ? "border-brand bg-brand" : "border-white/20"
+              }`}
+            >
+              {active ? (
+                <Check aria-hidden="true" size={12} className="text-white" />
+              ) : null}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

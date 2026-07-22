@@ -1,3 +1,5 @@
+import type { TrainerGender } from "@/lib/trainer-profile";
+
 export type TrainerBadge = "award" | "loved";
 
 export type Trainer = {
@@ -6,6 +8,7 @@ export type Trainer = {
   userId: string | null;
   slug: string;
   name: string;
+  gender: TrainerGender;
   firstName: string;
   city: string;
   state: string;

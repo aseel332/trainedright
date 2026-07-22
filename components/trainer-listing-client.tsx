@@ -14,6 +14,7 @@ import {
   Search,
   SlidersHorizontal,
   Trophy,
+  VenusAndMars,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -26,6 +27,12 @@ import {
   cityOptions,
   searchCategories,
 } from "@/lib/search-categories";
+import {
+  isTrainerGenderOption,
+  trainerGenderLabel,
+  trainerGenderOptions,
+  type TrainerGenderOptionId,
+} from "@/lib/trainer-profile";
 import type { Story, Trainer, TrainerSort } from "@/lib/types";
 
 type PreferenceDialog = "onboarding" | "city" | "sports" | null;
@@ -35,6 +42,7 @@ const STORAGE_KEYS = {
   city: "tr_city",
   categories: "tr_categories",
   sports: "tr_sports",
+  genders: "tr_genders",
 };
 
 const categoryIcons: Record<string, typeof Dumbbell> = {
@@ -70,6 +78,7 @@ export function TrainerListingClient({
   const [categories, setCategories] = useState<string[]>(initialCategories);
   const [sports, setSports] = useState<string[]>([]);
   const [specialties, setSpecialties] = useState<string[]>([]);
+  const [genders, setGenders] = useState<TrainerGenderOptionId[]>([]);
   // Desktop sidebar starts collapsed so results get the full width; the mobile
   // sheet is a separate toggle.
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
@@ -93,10 +102,16 @@ export function TrainerListingClient({
         const storedSports = parseStoredList(
           localStorage.getItem(STORAGE_KEYS.sports),
         );
+        const storedGenders = parseStoredList(
+          localStorage.getItem(STORAGE_KEYS.genders),
+          isTrainerGenderOption,
+        ) as TrainerGenderOptionId[];
 
         if (!initialCity && storedCity) {
           setCity(storedCity);
         }
+
+        setGenders(storedGenders);
 
         if (initialCategories.length === 0 && storedCategories.length > 0) {
           setCategories(storedCategories);
@@ -171,11 +186,13 @@ export function TrainerListingClient({
         categories,
         sports,
         specialties,
+        genders,
       }),
-    [trainers, query, city, sort, categories, sports, specialties],
+    [trainers, query, city, sort, categories, sports, specialties, genders],
   );
 
-  const activeCount = categories.length + sports.length + specialties.length;
+  const activeCount =
+    categories.length + sports.length + specialties.length + genders.length;
   const cityLabel = city || "All cities";
   const sportSelected = categories.includes(SPORT_CATEGORY_ID);
 
@@ -183,6 +200,7 @@ export function TrainerListingClient({
     nextCity: string,
     nextCategories: string[],
     nextSports: string[],
+    nextGenders: TrainerGenderOptionId[],
   ) {
     try {
       localStorage.setItem(STORAGE_KEYS.onboarded, "1");
@@ -192,6 +210,7 @@ export function TrainerListingClient({
         JSON.stringify(nextCategories),
       );
       localStorage.setItem(STORAGE_KEYS.sports, JSON.stringify(nextSports));
+      localStorage.setItem(STORAGE_KEYS.genders, JSON.stringify(nextGenders));
     } catch {
       // Local storage can be blocked; UI state still works.
     }
@@ -199,7 +218,7 @@ export function TrainerListingClient({
 
   function saveCity(nextCity: string) {
     setCity(nextCity);
-    persist(nextCity, categories, sports);
+    persist(nextCity, categories, sports, genders);
   }
 
   // Toggling a coach type never touches the speciality filter — the two are
@@ -222,7 +241,7 @@ export function TrainerListingClient({
     }
 
     setCategories(nextCategories);
-    persist(city, nextCategories, nextSports);
+    persist(city, nextCategories, nextSports, genders);
   }
 
   function toggleSport(sport: string) {
@@ -230,7 +249,15 @@ export function TrainerListingClient({
       ? sports.filter((item) => item !== sport)
       : [...sports, sport];
     setSports(next);
-    persist(city, categories, next);
+    persist(city, categories, next, genders);
+  }
+
+  function toggleGender(gender: TrainerGenderOptionId) {
+    const next = genders.includes(gender)
+      ? genders.filter((item) => item !== gender)
+      : [...genders, gender];
+    setGenders(next);
+    persist(city, categories, sports, next);
   }
 
   function toggleSpecialty(tag: string) {
@@ -245,7 +272,8 @@ export function TrainerListingClient({
     setCategories([]);
     setSports([]);
     setSpecialties([]);
-    persist(city, [], []);
+    setGenders([]);
+    persist(city, [], [], []);
   }
 
   function skipOnboarding() {
@@ -260,12 +288,14 @@ export function TrainerListingClient({
   const panelProps = {
     categories,
     sports,
+    genders,
     specialties,
     specialityOptions,
     sportSelected,
     onToggleCategory: toggleCategory,
     onEditSports: () => setDialog("sports"),
     onRemoveSport: toggleSport,
+    onToggleGender: toggleGender,
     onToggleSpecialty: toggleSpecialty,
     onClear: clearAll,
   };
@@ -397,6 +427,13 @@ export function TrainerListingClient({
                   onRemove={() => toggleSport(sport)}
                 />
               ))}
+              {genders.map((gender) => (
+                <FilterChip
+                  key={`gender-${gender}`}
+                  label={trainerGenderLabel(gender)}
+                  onRemove={() => toggleGender(gender)}
+                />
+              ))}
               {specialties.map((tag) => (
                 <FilterChip
                   key={`spec-${tag}`}
@@ -500,7 +537,7 @@ export function TrainerListingClient({
           onSave={(nextCity, nextCategories) => {
             setCity(nextCity);
             setCategories(nextCategories);
-            persist(nextCity, nextCategories, sports);
+            persist(nextCity, nextCategories, sports, genders);
             // If they signed up as a Sports Coach seeker, go straight into
             // narrowing by sport.
             setDialog(
@@ -604,24 +641,28 @@ function FilterChip({
 function FilterPanel({
   categories,
   sports,
+  genders,
   specialties,
   specialityOptions,
   sportSelected,
   onToggleCategory,
   onEditSports,
   onRemoveSport,
+  onToggleGender,
   onToggleSpecialty,
   onClear,
   onCollapse,
 }: {
   categories: string[];
   sports: string[];
+  genders: TrainerGenderOptionId[];
   specialties: string[];
   specialityOptions: string[];
   sportSelected: boolean;
   onToggleCategory: (id: string) => void;
   onEditSports: () => void;
   onRemoveSport: (sport: string) => void;
+  onToggleGender: (gender: TrainerGenderOptionId) => void;
   onToggleSpecialty: (tag: string) => void;
   onClear: () => void;
   onCollapse?: () => void;
@@ -743,6 +784,45 @@ function FilterPanel({
           )}
         </div>
       ) : null}
+
+      <div className="mb-6">
+        <p className="mb-3 text-[10px] font-extrabold uppercase text-muted">
+          Coach gender
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {trainerGenderOptions.map((option) => {
+            const active = genders.includes(option.id);
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => onToggleGender(option.id)}
+                className={`flex min-h-[44px] items-center gap-2 rounded-[13px] border px-3 py-2 text-left transition ${
+                  active
+                    ? "border-brand/60 bg-brand/10"
+                    : "border-white/10 bg-panel hover:border-white/20"
+                }`}
+              >
+                <VenusAndMars
+                  aria-hidden="true"
+                  size={15}
+                  className={active ? "text-brand-light" : "text-muted"}
+                />
+                <span className="min-w-0 flex-1 text-[12px] font-extrabold text-white">
+                  {option.label}
+                </span>
+                {active ? (
+                  <Check
+                    aria-hidden="true"
+                    className="flex-none text-brand-light"
+                    size={14}
+                  />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {specialityOptions.length > 0 ? (
         <div className="mb-2">

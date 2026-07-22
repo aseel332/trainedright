@@ -4,6 +4,7 @@ import { createPublicServerClient } from "@/lib/server/supabase-public";
 import { connection } from "next/server";
 import { stateForCity } from "@/lib/search-categories";
 import { filterAndSortTrainers, type TrainerQuery } from "@/lib/trainer-utils";
+import { isTrainerGenderOption } from "@/lib/trainer-profile";
 import type {
   PricingOption,
   Story,
@@ -24,6 +25,7 @@ type TrainerRow = {
   user_id?: string | null;
   slug: string;
   name: string;
+  gender?: string | null;
   first_name: string;
   city: string;
   state?: string | null;
@@ -148,11 +150,14 @@ function badgeArray(value: unknown): TrainerBadge[] {
 }
 
 function mapTrainer(row: TrainerRow): Trainer {
+  const gender = row.gender ?? "";
+
   return {
     id: row.id,
     userId: row.user_id ?? null,
     slug: row.slug,
     name: row.name,
+    gender: isTrainerGenderOption(gender) ? gender : "",
     firstName: row.first_name,
     city: row.city,
     // The state column may not be populated yet (pre-migration); derive it

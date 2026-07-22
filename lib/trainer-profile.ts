@@ -2,6 +2,32 @@ import { SPORT_CATEGORY_ID, stateForCity } from "@/lib/search-categories";
 
 export const MAX_SPECIALTIES = 4;
 
+export const trainerGenderOptions = [
+  { id: "female", label: "Female" },
+  { id: "male", label: "Male" },
+  { id: "non_binary", label: "Non-binary" },
+  { id: "prefer_not_to_say", label: "Prefer not to say" },
+] as const;
+
+export type TrainerGenderOptionId =
+  (typeof trainerGenderOptions)[number]["id"];
+
+export type TrainerGender = "" | TrainerGenderOptionId;
+
+const trainerGenderIds = new Set<string>(
+  trainerGenderOptions.map((option) => option.id),
+);
+
+export function isTrainerGenderOption(
+  value: string,
+): value is TrainerGenderOptionId {
+  return trainerGenderIds.has(value);
+}
+
+export function trainerGenderLabel(value: string) {
+  return trainerGenderOptions.find((option) => option.id === value)?.label ?? "";
+}
+
 /**
  * A custom package: the trainer trains the client `daysPerWeek` days a week for
  * `durationDays` days total, for a single `totalAmount` (not per session).
@@ -87,6 +113,7 @@ export type ListingBlurb = "description" | "review";
 
 export type TrainerProfileDraft = {
   name: string;
+  gender: TrainerGender;
   headline: string;
   bio: string;
   city: string;
@@ -121,6 +148,7 @@ export type TrainerProfileDraft = {
 
 export const emptyProfile: TrainerProfileDraft = {
   name: "",
+  gender: "",
   headline: "",
   bio: "",
   city: "",
@@ -163,6 +191,11 @@ function stringArrayOf(value: unknown): string[] {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
     : [];
+}
+
+function genderOf(value: unknown): TrainerGender {
+  const raw = stringOf(value);
+  return isTrainerGenderOption(raw) ? raw : "";
 }
 
 function galleryOf(value: unknown): ProfileMediaItem[] {
@@ -303,6 +336,7 @@ export function parseProfileDraft(value: unknown): TrainerProfileDraft {
 
   return {
     name: stringOf(raw.name),
+    gender: genderOf(raw.gender),
     headline: stringOf(raw.headline),
     bio: stringOf(raw.bio),
     city: stringOf(raw.city),
@@ -398,6 +432,11 @@ export function profileRequirements(
       id: "name",
       label: "Your name",
       done: profile.name.trim().length > 1,
+    },
+    {
+      id: "gender",
+      label: "Coach gender",
+      done: Boolean(profile.gender),
     },
     {
       id: "categories",

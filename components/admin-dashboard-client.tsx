@@ -24,6 +24,7 @@ import {
   setTrainerApproval,
   type AdminApprovalStatus,
 } from "@/app/admin/actions";
+import { trainerGenderLabel } from "@/lib/trainer-profile";
 
 export type AdminTrainerRow = {
   userId: string;
@@ -32,6 +33,7 @@ export type AdminTrainerRow = {
   isLive: boolean;
   email: string;
   displayName: string;
+  gender: string;
   approvalStatus: string;
   onboardingComplete: boolean;
   submittedAt: string | null;
@@ -267,6 +269,11 @@ function TrainerCard({
               {trainer.yearsExperience
                 ? `${trainer.yearsExperience} yrs experience`
                 : "Experience not set"}
+            </span>
+            <span>
+              {trainer.gender
+                ? `${trainerGenderLabel(trainer.gender)} coach`
+                : "Gender not set"}
             </span>
             <span>{trainer.planCount} plans</span>
             <span>{trainer.credentialCount} credentials</span>

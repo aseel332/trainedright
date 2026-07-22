@@ -267,6 +267,7 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
     user_id: userId,
     slug,
     name,
+    gender: profile.gender,
     first_name: name.split(/\s+/)[0] ?? name,
     // Never invent a location: a wrong city puts them in the wrong searches.
     city: profile.city,
@@ -307,7 +308,7 @@ export async function publishTrainerAccount(userId: string): Promise<PublishResu
   // migration degrades gracefully instead of failing the whole publish.
   async function upsertTrainerRow(db: SupabaseClient) {
     const row: Record<string, unknown> = { ...trainerRow };
-    for (let i = 0; i < 6; i += 1) {
+    for (let i = 0; i < 8; i += 1) {
       const result = await db
         .from("trainers")
         .upsert(row, { onConflict: "user_id" })
