@@ -52,9 +52,24 @@ export async function generateMetadata({
     transformationId,
   );
 
+  const title = `${transformation.clientName}'s ${transformation.resultLabel} transformation with ${trainer.name}`;
+  const description =
+    transformation.review ||
+    `${transformation.resultLabel} in ${transformation.durationLabel} — a real client transformation coached by ${trainer.name} in ${trainer.city}.`;
+  const path = `/trainers/${trainer.slug}/transformations/${transformation.id}`;
+
   return {
-    title: `${transformation.clientName}'s transformation | ${trainer.name}`,
-    description: transformation.review,
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      title,
+      description,
+      url: path,
+      images: [transformation.afterImageUrl, transformation.beforeImageUrl].filter(
+        Boolean,
+      ),
+    },
   };
 }
 

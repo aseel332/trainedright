@@ -9,7 +9,7 @@ import { createAdminSupabaseClient } from "@/lib/server/supabase-admin";
 import { parseProfileDraft } from "@/lib/trainer-profile";
 
 export const metadata: Metadata = {
-  title: "Admin | TrainedRight",
+  title: "Admin",
   description: "TrainedRight admin console.",
   robots: { index: false, follow: false },
 };

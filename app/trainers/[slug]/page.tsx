@@ -13,12 +13,16 @@ import {
 import { BadgeIcon } from "@/components/badge-icon";
 import { BookingBar } from "@/components/booking-bar";
 import { InstagramIcon, XIcon, YoutubeIcon } from "@/components/social-icons";
+import { JsonLd } from "@/components/json-ld";
 import { ProfileActions } from "@/components/profile-actions";
 import { MediaGallery } from "@/components/media-gallery";
 import { ReviewsSection } from "@/components/reviews-section";
 import { StoryCard } from "@/components/story-card";
 import { TransformationCard } from "@/components/transformation-card";
+import { categoryLabels } from "@/lib/search-categories";
+import { primaryCategoryLabel } from "@/lib/seo-pages";
 import { getTrainerProfile } from "@/lib/server/data";
+import { siteUrl } from "@/lib/site";
 import { normalizeSocialUrl } from "@/lib/socials";
 import { formatPriceInr } from "@/lib/trainer-utils";
 import type {
@@ -27,6 +31,15 @@ import type {
   TrainerLocation,
   TrainerProfile,
 } from "@/lib/types";
+
+/** Cuts descriptions at a word boundary so snippets never end mid-word. */
+function summarize(text: string, max = 155) {
+  if (text.length <= max) {
+    return text;
+  }
+  const cut = text.slice(0, max);
+  return `${cut.slice(0, cut.lastIndexOf(" "))}…`;
+}
 
 export async function generateMetadata({
   params,
@@ -38,13 +51,31 @@ export async function generateMetadata({
 
   if (!trainer) {
     return {
-      title: "Trainer not found | TrainedRight",
+      title: "Trainer not found",
     };
   }
 
+  const role = primaryCategoryLabel(trainer.categories);
+  const title = `${trainer.name} — ${role} in ${trainer.city}`;
+  const description = summarize(
+    trainer.bio ||
+      `${trainer.name} is a ${role.toLowerCase()} in ${trainer.city} on TrainedRight.`,
+  );
+  const path = `/trainers/${trainer.slug}`;
+
   return {
-    title: `${trainer.name} | TrainedRight`,
-    description: trainer.bio,
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      title,
+      description,
+      url: path,
+      type: "profile",
+      images: [trainer.heroImageUrl, trainer.cardImageUrl]
+        .filter(Boolean)
+        .slice(0, 1),
+    },
   };
 }
 
@@ -64,8 +95,61 @@ export default async function TrainerDetailPage({
   const offersFreeTrial = trainer.pricing.some((item) => item.priceInr === null);
   const hasPlans = trainer.pricing.length > 0;
 
+  const profileUrl = `${siteUrl}/trainers/${trainer.slug}`;
+  const businessJsonLd = {
+    "@context": "https://schema.org",
+    "@type": ["LocalBusiness", "HealthAndBeautyBusiness"],
+    "@id": `${profileUrl}#business`,
+    name: trainer.name,
+    description: trainer.bio,
+    url: profileUrl,
+    image: [trainer.heroImageUrl, trainer.cardImageUrl, trainer.avatarUrl].filter(
+      Boolean,
+    ),
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: trainer.city,
+      addressRegion: trainer.state,
+      addressCountry: "IN",
+    },
+    knowsAbout: [
+      ...categoryLabels(trainer.categories),
+      ...trainer.sports,
+      ...trainer.tags,
+    ],
+    ...(trainer.priceFromInr > 0
+      ? { priceRange: `${formatPriceInr(trainer.priceFromInr)}+` }
+      : {}),
+    ...(trainer.rating > 0 && trainer.reviewCount > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: trainer.rating,
+            reviewCount: trainer.reviewCount,
+            bestRating: 5,
+          },
+        }
+      : {}),
+  };
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Trainers",
+        item: `${siteUrl}/trainers`,
+      },
+      { "@type": "ListItem", position: 3, name: trainer.name, item: profileUrl },
+    ],
+  };
+
   return (
     <main className="min-h-screen bg-background pb-28 text-white lg:pb-12">
+      <JsonLd data={businessJsonLd} />
+      <JsonLd data={breadcrumbJsonLd} />
       <ProfileHero trainer={trainer} />
 
       <div className="desktop-profile-layout mx-auto grid max-w-7xl gap-8 px-4 py-6 sm:px-6 lg:px-0">

@@ -3,8 +3,9 @@ import { ReviewSubmitClient } from "@/components/review-submit-client";
 import { getPendingReviewRequest } from "@/lib/server/token-requests";
 
 export const metadata: Metadata = {
-  title: "Rate your coach | TrainedRight",
+  title: "Rate Your Coach",
   description: "Share your experience with your coach on TrainedRight.",
+  robots: { index: false, follow: false },
 };
 
 export default async function ReviewTokenPage({

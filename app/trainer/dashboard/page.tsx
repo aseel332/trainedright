@@ -11,9 +11,10 @@ import { getOrCreateTrainerAccount } from "@/lib/server/trainer-account";
 import { parseProfileDraft } from "@/lib/trainer-profile";
 
 export const metadata: Metadata = {
-  title: "Trainer dashboard | TrainedRight",
+  title: "Trainer Dashboard",
   description:
     "Track demand, manage your profile, and collect verified reviews and transformations.",
+  robots: { index: false, follow: false },
 };
 
 export default async function TrainerDashboardPage() {

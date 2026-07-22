@@ -3,8 +3,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Play } from "lucide-react";
+import { JsonLd } from "@/components/json-ld";
 import { getTrainerProfile } from "@/lib/server/data";
 import { isOptimizableImageUrl, resolveStoredVideo } from "@/lib/media-links";
+import { siteUrl } from "@/lib/site";
 import type { Story, StoryMedia, TrainerProfile } from "@/lib/types";
 
 type StoryPageProps = {
@@ -44,10 +46,22 @@ export async function generateMetadata({
 }: StoryPageProps): Promise<Metadata> {
   const { slug, storyId } = await params;
   const { trainer, story } = await getStoryPageData(slug, storyId);
+  const path = `/trainers/${trainer.slug}/stories/${story.id}`;
+  const description = story.intro || story.excerpt || undefined;
+  const coverImage =
+    story.cover?.kind === "image" ? story.cover.url : story.imageUrl;
 
   return {
-    title: `${story.title} | ${trainer.name} on TrainedRight`,
-    description: story.intro || story.excerpt || undefined,
+    title: `${story.title} — ${trainer.name}`,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      title: story.title,
+      description,
+      url: path,
+      type: "article",
+      images: coverImage ? [coverImage] : undefined,
+    },
   };
 }
 
@@ -55,8 +69,27 @@ export default async function StoryDetailPage({ params }: StoryPageProps) {
   const { slug, storyId } = await params;
   const { trainer, story } = await getStoryPageData(slug, storyId);
 
+  const storyUrl = `${siteUrl}/trainers/${trainer.slug}/stories/${story.id}`;
+  const coverImage =
+    story.cover?.kind === "image" ? story.cover.url : story.imageUrl;
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: story.title,
+    description: story.intro || story.excerpt,
+    ...(coverImage ? { image: [coverImage] } : {}),
+    author: {
+      "@type": "Person",
+      name: trainer.name,
+      url: `${siteUrl}/trainers/${trainer.slug}`,
+    },
+    publisher: { "@id": `${siteUrl}/#organization` },
+    mainEntityOfPage: storyUrl,
+  };
+
   return (
     <main className="min-h-screen bg-background pb-20 text-white">
+      <JsonLd data={articleJsonLd} />
       <div className="mx-auto max-w-5xl px-4 pt-5 sm:px-6">
         <Link
           href={`/trainers/${trainer.slug}`}

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -10,11 +11,16 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { HomeHeroSearch } from "@/components/home-hero-search";
+import { PopularSearches } from "@/components/popular-searches";
 import { SiteHeader } from "@/components/site-header";
 import { StoryCard } from "@/components/story-card";
 import { TrainerCard } from "@/components/trainer-card";
 import { getFeaturedStories, getTrainers } from "@/lib/server/data";
 import { searchCategories } from "@/lib/search-categories";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 const heroImage =
   "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=1800";
@@ -274,6 +280,8 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      <PopularSearches />
 
       {/* Footer */}
       <footer className="border-t border-white/10">

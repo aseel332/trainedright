@@ -4,8 +4,9 @@ import { TrainerAuthClient } from "@/components/trainer-auth-client";
 import { createAuthServerClient } from "@/lib/server/supabase-server";
 
 export const metadata: Metadata = {
-  title: "Trainer sign in | TrainedRight",
+  title: "Trainer Sign In",
   description: "Sign in or create a trainer account on TrainedRight.",
+  robots: { index: false, follow: false },
 };
 
 type TrainerAuthPageProps = {

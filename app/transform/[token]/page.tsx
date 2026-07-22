@@ -3,8 +3,9 @@ import { TransformationSubmitClient } from "@/components/transformation-submit-c
 import { getPendingTransformationRequest } from "@/lib/server/token-requests";
 
 export const metadata: Metadata = {
-  title: "Share your transformation | TrainedRight",
+  title: "Share Your Transformation",
   description: "Submit your before/after story for your coach on TrainedRight.",
+  robots: { index: false, follow: false },
 };
 
 export default async function TransformationTokenPage({

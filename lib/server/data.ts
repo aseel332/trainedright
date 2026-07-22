@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { createPublicServerClient } from "@/lib/server/supabase-public";
 import { connection } from "next/server";
 import { stateForCity } from "@/lib/search-categories";
@@ -343,14 +344,17 @@ function mapCredential(row: CredentialRow): TrainerCredential {
   };
 }
 
-export async function getTrainers(options: TrainerQuery = {}) {
+/**
+ * Every active trainer, without opting the route into request-time rendering.
+ * Used by statically generated surfaces (SEO landing pages, the sitemap) that
+ * revalidate on an interval instead. Deduped per render pass.
+ */
+export const listActiveTrainers = cache(async (): Promise<Trainer[]> => {
   const supabase = createPublicServerClient();
 
   if (!supabase) {
     return [];
   }
-
-  await connection();
 
   const { data, error } = await supabase
     .from("trainers")
@@ -362,7 +366,13 @@ export async function getTrainers(options: TrainerQuery = {}) {
     return [];
   }
 
-  return filterAndSortTrainers((data as TrainerRow[]).map(mapTrainer), options);
+  return (data as TrainerRow[]).map(mapTrainer);
+});
+
+export async function getTrainers(options: TrainerQuery = {}) {
+  await connection();
+
+  return filterAndSortTrainers(await listActiveTrainers(), options);
 }
 
 export async function getFeaturedStories() {
@@ -492,7 +502,8 @@ async function fetchProfileChildren(trainerId: string) {
   };
 }
 
-export async function getTrainerProfile(
+// Deduped per render pass: generateMetadata and the page share one fetch.
+export const getTrainerProfile = cache(async function getTrainerProfile(
   slug: string,
 ): Promise<TrainerProfile | null> {
   const supabase = createPublicServerClient();
@@ -518,4 +529,4 @@ export async function getTrainerProfile(
   const children = await fetchProfileChildren(trainer.id);
 
   return { ...trainer, ...children };
-}
+});

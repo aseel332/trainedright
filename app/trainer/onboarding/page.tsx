@@ -6,8 +6,9 @@ import { getOrCreateTrainerAccount } from "@/lib/server/trainer-account";
 import { parseProfileDraft } from "@/lib/trainer-profile";
 
 export const metadata: Metadata = {
-  title: "Set up your trainer profile | TrainedRight",
+  title: "Set Up Your Trainer Profile",
   description: "A guided setup for your TrainedRight coach profile.",
+  robots: { index: false, follow: false },
 };
 
 export default async function TrainerOnboardingPage() {

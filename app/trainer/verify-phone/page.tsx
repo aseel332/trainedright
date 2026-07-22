@@ -4,9 +4,10 @@ import { TrainerPhoneVerifyClient } from "@/components/trainer-phone-verify-clie
 import { createAuthServerClient } from "@/lib/server/supabase-server";
 
 export const metadata: Metadata = {
-  title: "Add your phone | TrainedRight",
+  title: "Add Your Phone",
   description:
     "Add your phone number to continue setting up your coach profile.",
+  robots: { index: false, follow: false },
 };
 
 export default async function TrainerVerifyPhonePage() {
