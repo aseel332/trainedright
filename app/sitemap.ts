@@ -45,6 +45,20 @@ function absoluteImages(urls: (string | null | undefined)[]) {
   return images.length > 0 ? images : undefined;
 }
 
+/**
+ * Next interpolates sitemap values into the XML without escaping, so a raw
+ * `&` in a URL (image query strings, e.g. Unsplash) makes the whole document
+ * unparseable. Escape everything we emit.
+ */
+function escapeXml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/'/g, "&apos;")
+    .replace(/"/g, "&quot;");
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
@@ -171,5 +185,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
-  return entries;
+  return entries.map((entry) => ({
+    ...entry,
+    url: escapeXml(entry.url),
+    images: entry.images?.map(escapeXml),
+  }));
 }
