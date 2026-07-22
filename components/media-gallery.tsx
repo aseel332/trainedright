@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Play } from "lucide-react";
-import { resolveStoredVideo } from "@/lib/media-links";
+import { Maximize2, Play } from "lucide-react";
+import { resolveStoredVideo, watchUrlForStoredVideo } from "@/lib/media-links";
 import type { TrainerMedia } from "@/lib/types";
 
 export function MediaGallery({ media }: { media: TrainerMedia[] }) {
@@ -59,7 +59,7 @@ export function MediaGallery({ media }: { media: TrainerMedia[] }) {
         })}
       </div>
 
-      <div className="relative h-[260px] overflow-hidden rounded-[18px] border border-white/10 bg-black md:h-[360px]">
+      <div className="relative h-[300px] overflow-hidden rounded-[18px] border border-white/10 bg-black md:h-[360px]">
         {activeVideo ? (
           <>
             {activeVideo.isIframe ? (
@@ -86,6 +86,19 @@ export function MediaGallery({ media }: { media: TrainerMedia[] }) {
               <span className="h-2 w-2 rounded-full bg-brand" />
               Video
             </span>
+            {/* Reliable, fully-controllable player — the inline Google Drive
+                embed's controls are limited on mobile, so this always opens a
+                proper player. */}
+            <a
+              href={watchUrlForStoredVideo(active.url)}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Open video in a full player"
+              className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-[10px] font-extrabold uppercase text-white backdrop-blur transition hover:bg-black/85"
+            >
+              <Maximize2 aria-hidden="true" size={12} />
+              Fullscreen
+            </a>
           </>
         ) : (
           <Image

@@ -4,9 +4,9 @@ import { TrainerPhoneVerifyClient } from "@/components/trainer-phone-verify-clie
 import { createAuthServerClient } from "@/lib/server/supabase-server";
 
 export const metadata: Metadata = {
-  title: "Verify your phone | TrainedRight",
+  title: "Add your phone | TrainedRight",
   description:
-    "Confirm your phone number to continue setting up your coach profile.",
+    "Add your phone number to continue setting up your coach profile.",
 };
 
 export default async function TrainerVerifyPhonePage() {
@@ -19,7 +19,7 @@ export default async function TrainerVerifyPhonePage() {
     redirect("/trainer/auth?mode=signin&next=/trainer/verify-phone");
   }
 
-  // Phone already confirmed on the auth user — nothing to do here.
+  // Phone already saved on the auth user — nothing to do here.
   if (user.phone_confirmed_at) {
     redirect("/trainer/onboarding");
   }

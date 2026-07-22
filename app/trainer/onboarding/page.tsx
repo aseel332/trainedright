@@ -20,7 +20,7 @@ export default async function TrainerOnboardingPage() {
     redirect("/trainer/auth?mode=signin&next=/trainer/onboarding");
   }
 
-  // Phone confirmation is the first gate for a new trainer.
+  // Phone capture is the first gate for a new trainer.
   if (!user.phone_confirmed_at) {
     redirect("/trainer/verify-phone");
   }

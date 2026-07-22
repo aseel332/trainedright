@@ -26,7 +26,7 @@ export default async function TrainerDashboardPage() {
     redirect("/trainer/auth?mode=signin&next=/trainer/dashboard");
   }
 
-  // Phone confirmation is the first gate for a new trainer.
+  // Phone capture is the first gate for a new trainer.
   if (!user.phone_confirmed_at) {
     redirect("/trainer/verify-phone");
   }

@@ -93,6 +93,26 @@ export function isValidVideoLink(raw: string): boolean {
 }
 
 /**
+ * A URL that opens the source video in its own, fully-controllable player —
+ * used as a reliable fallback where the inline embed's controls are limited,
+ * notably Google Drive's preview player on mobile (persistent top toolbar,
+ * flaky touch controls). Takes the URL as stored by publish (an embed/preview
+ * or direct-file URL) and returns the "watch"/"view" page.
+ */
+export function watchUrlForStoredVideo(url: string): string {
+  const youtube = url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+  if (youtube) {
+    return `https://www.youtube.com/watch?v=${youtube[1]}`;
+  }
+
+  if (/drive\.google\.com/i.test(url)) {
+    return url.replace(/\/preview([?#].*)?$/i, "/view");
+  }
+
+  return url;
+}
+
+/**
  * True when Next's image optimizer is allowed to fetch this URL — it must match
  * a host in next.config `images.remotePatterns`. Video thumbnails (Google Drive,
  * YouTube) and other off-allowlist hosts must render with `unoptimized`.
