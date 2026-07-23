@@ -399,6 +399,32 @@ export async function getFeaturedStories() {
   return (data as StoryRow[]).map(mapStory);
 }
 
+/**
+ * Every active story (featured first), without opting the route into
+ * request-time rendering — for ISR'd city hub pages. Deduped per render pass.
+ */
+export const listActiveStories = cache(async (): Promise<Story[]> => {
+  const supabase = createPublicServerClient();
+
+  if (!supabase) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("stories")
+    .select("*")
+    .eq("is_active", true)
+    .order("is_featured", { ascending: false })
+    .order("sort_order", { ascending: true })
+    .limit(60);
+
+  if (error || !data) {
+    return [];
+  }
+
+  return (data as StoryRow[]).map(mapStory);
+});
+
 /** Every active story across the marketplace, featured ones first. */
 export async function getStories(limit = 12) {
   const supabase = createPublicServerClient();

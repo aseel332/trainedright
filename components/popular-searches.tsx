@@ -1,14 +1,13 @@
 import Link from "next/link";
-import { cityOptions } from "@/lib/search-categories";
-import { citySlugOf, seoProfessions } from "@/lib/seo-pages";
+import { citySlugOf, launchedCities, seoProfessions } from "@/lib/seo-pages";
 
 /**
  * Footer link mesh into the profession/city landing pages. Keeps those pages
  * discoverable by crawlers (never orphaned) and passes descriptive anchor
- * text like "Personal Trainers in Mumbai".
+ * text like "Personal Trainers in Ahmedabad". Only launched cities appear.
  */
 export function PopularSearches() {
-  const featuredCities = cityOptions.slice(0, 5);
+  const featuredCities = launchedCities.slice(0, 5);
 
   return (
     <section aria-label="Popular searches" className="border-t border-white/10">

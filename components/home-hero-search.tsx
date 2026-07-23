@@ -8,6 +8,7 @@ import {
   cityOptions,
   searchCategories,
 } from "@/lib/search-categories";
+import { citySlugOf, isCityLaunched } from "@/lib/seo-pages";
 
 export function HomeHeroSearch() {
   const router = useRouter();
@@ -22,16 +23,15 @@ export function HomeHeroSearch() {
     );
   }
 
+  // Every search lands on the chosen city's own page; the category selection
+  // rides along as ?cat= and seeds the filters there.
   function findCoaches() {
     if (!city) {
       return;
     }
-    const params = new URLSearchParams();
-    params.set("city", city);
-    if (categories.length > 0) {
-      params.set("cat", categories.join(","));
-    }
-    router.push(`/trainers?${params.toString()}`);
+    const suffix =
+      categories.length > 0 ? `?cat=${categories.join(",")}` : "";
+    router.push(`/${citySlugOf(city)}${suffix}`);
   }
 
   return (
@@ -55,8 +55,14 @@ export function HomeHeroSearch() {
               Select your city
             </option>
             {cityOptions.map((option) => (
-              <option key={option.name} value={option.name}>
-                {option.name}
+              <option
+                key={option.name}
+                value={option.name}
+                disabled={!isCityLaunched(option.name)}
+              >
+                {isCityLaunched(option.name)
+                  ? option.name
+                  : `${option.name} — coming soon`}
               </option>
             ))}
           </select>
@@ -102,7 +108,7 @@ export function HomeHeroSearch() {
       {categories.includes(SPORT_CATEGORY_ID) ? (
         <p className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-muted">
           <Trophy aria-hidden="true" size={13} className="text-brand-light" />
-          You&apos;ll choose specific sports on the results page.
+          You&apos;ll choose specific sports on your city&apos;s page.
         </p>
       ) : null}
     </div>

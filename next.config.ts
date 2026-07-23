@@ -1,6 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      // The all-cities listing is gone — every search lives on a city hub
+      // (/mumbai). Exact-path match, so /trainers/[slug] profiles still work.
+      {
+        source: "/trainers",
+        destination: "/",
+        permanent: true,
+      },
+    ];
+  },
   images: {
     // Next 16 blocks upstream images that resolve to a non-unicast IP. This
     // machine's DNS64 resolver answers for Supabase storage with NAT64

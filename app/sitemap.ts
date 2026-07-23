@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
-import { cityOptions } from "@/lib/search-categories";
-import { citySlugOf, seoProfessions } from "@/lib/seo-pages";
+import { citySlugOf, launchedCities, seoProfessions } from "@/lib/seo-pages";
 import { createPublicServerClient } from "@/lib/server/supabase-public";
 import { siteUrl } from "@/lib/site";
 
@@ -65,12 +64,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = [
     { url: siteUrl, lastModified: now, changeFrequency: "daily", priority: 1 },
     {
-      url: `${siteUrl}/trainers`,
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.9,
-    },
-    {
       url: `${siteUrl}/trainer`,
       lastModified: now,
       changeFrequency: "monthly",
@@ -116,10 +109,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     transformations = (transformationsResult.data ?? []) as TransformationRow[];
   }
 
+  // City hubs: launched cities with at least one coach when the DB is
+  // reachable (empty hubs are noindexed), every launched city otherwise.
+  for (const city of launchedCities) {
+    const hasCoaches = trainers.some((trainer) => trainer.city === city.name);
+    if (!supabase || hasCoaches) {
+      entries.push({
+        url: `${siteUrl}/${citySlugOf(city.name)}`,
+        lastModified: now,
+        changeFrequency: "daily",
+        priority: 0.9,
+      });
+    }
+  }
+
   // City landing pages: only combos with at least one coach when the DB is
   // reachable (empty combos are noindexed), every combo otherwise.
   for (const profession of seoProfessions) {
-    for (const city of cityOptions) {
+    for (const city of launchedCities) {
       const hasInventory = trainers.some(
         (trainer) =>
           trainer.city === city.name &&

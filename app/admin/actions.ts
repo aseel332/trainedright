@@ -139,8 +139,8 @@ export async function setTrainerApproval(
   }
 
   revalidatePath("/admin");
-  revalidatePath("/trainers");
-  revalidatePath("/");
+  // One sweep over every cached page: city hubs, landing pages, home.
+  revalidatePath("/", "layout");
   if (publish.slug) {
     revalidatePath(`/trainers/${publish.slug}`);
   }
@@ -164,8 +164,8 @@ export async function republishTrainer(
   }
 
   revalidatePath("/admin");
-  revalidatePath("/trainers");
-  revalidatePath("/");
+  // One sweep over every cached page: city hubs, landing pages, home.
+  revalidatePath("/", "layout");
   if (result.slug) {
     revalidatePath(`/trainers/${result.slug}`);
   }
@@ -223,7 +223,7 @@ export async function deleteTrainer(userId: string): Promise<AdminActionResult> 
   }
 
   revalidatePath("/admin");
-  revalidatePath("/trainers");
-  revalidatePath("/");
+  // One sweep over every cached page: city hubs, landing pages, home.
+  revalidatePath("/", "layout");
   return { ok: true };
 }

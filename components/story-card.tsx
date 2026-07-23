@@ -65,12 +65,14 @@ export function StoryCard({
       ) : null}
       <div className="absolute inset-x-0 bottom-0 p-4 md:p-5">
         <h3
-          className={`font-display font-extrabold leading-[1.08] text-white ${
-            size === "large"
-              ? "text-[20px] md:text-[24px]"
-              : size === "profile"
-                ? "text-[21px] md:text-[26px]"
-                : "text-[17px]"
+          className={`font-display leading-[1.05] text-white ${
+            size === "banner"
+              ? "text-[26px] font-black md:text-[32px]"
+              : size === "large"
+                ? "text-[20px] font-extrabold md:text-[24px]"
+                : size === "profile"
+                  ? "text-[21px] font-extrabold md:text-[26px]"
+                  : "text-[17px] font-extrabold"
           }`}
         >
           {story.title}

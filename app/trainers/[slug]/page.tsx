@@ -20,7 +20,11 @@ import { ReviewsSection } from "@/components/reviews-section";
 import { StoryCard } from "@/components/story-card";
 import { TransformationCard } from "@/components/transformation-card";
 import { categoryLabels } from "@/lib/search-categories";
-import { primaryCategoryLabel } from "@/lib/seo-pages";
+import {
+  citySlugOf,
+  isCityLaunched,
+  primaryCategoryLabel,
+} from "@/lib/seo-pages";
 import { getTrainerProfile } from "@/lib/server/data";
 import { siteUrl } from "@/lib/site";
 import { normalizeSocialUrl } from "@/lib/socials";
@@ -131,18 +135,32 @@ export default async function TrainerDetailPage({
         }
       : {}),
   };
+  // The trainer's city hub is the natural parent page (when that city has
+  // actually launched — legacy rows could hold anything).
+  const cityHubPath = isCityLaunched(trainer.city)
+    ? `/${citySlugOf(trainer.city)}`
+    : null;
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+      ...(cityHubPath
+        ? [
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: trainer.city,
+              item: `${siteUrl}${cityHubPath}`,
+            },
+          ]
+        : []),
       {
         "@type": "ListItem",
-        position: 2,
-        name: "Trainers",
-        item: `${siteUrl}/trainers`,
+        position: cityHubPath ? 3 : 2,
+        name: trainer.name,
+        item: profileUrl,
       },
-      { "@type": "ListItem", position: 3, name: trainer.name, item: profileUrl },
     ],
   };
 
@@ -303,8 +321,12 @@ function ProfileHero({ trainer }: { trainer: TrainerProfile }) {
 
       <div className="relative mx-auto flex max-w-7xl justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Link
-          href="/trainers"
-          aria-label="Back to trainers"
+          href={
+            isCityLaunched(trainer.city)
+              ? `/${citySlugOf(trainer.city)}`
+              : "/"
+          }
+          aria-label={`Back to coaches in ${trainer.city}`}
           className="grid h-11 w-11 place-items-center rounded-[12px] border border-white/15 bg-black/45 text-white backdrop-blur"
         >
           <ArrowLeft aria-hidden="true" size={20} />

@@ -4,46 +4,30 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Apple,
   ArrowDownWideNarrow,
-  ArrowLeft,
   Check,
   ChevronDown,
   Dumbbell,
   Leaf,
   ListFilter,
-  MapPin,
   Search,
   SlidersHorizontal,
   Trophy,
   VenusAndMars,
   X,
 } from "lucide-react";
-import Link from "next/link";
-import { StoryCard } from "@/components/story-card";
 import { TrainerCard } from "@/components/trainer-card";
 import { filterAndSortTrainers } from "@/lib/trainer-utils";
 import {
   SPORT_CATEGORY_ID,
   categoryLabels,
-  cityOptions,
   searchCategories,
 } from "@/lib/search-categories";
 import {
-  isTrainerGenderOption,
   trainerGenderLabel,
   trainerGenderOptions,
   type TrainerGenderOptionId,
 } from "@/lib/trainer-profile";
-import type { Story, Trainer, TrainerSort } from "@/lib/types";
-
-type PreferenceDialog = "onboarding" | "city" | "sports" | null;
-
-const STORAGE_KEYS = {
-  onboarded: "tr_onboarded",
-  city: "tr_city",
-  categories: "tr_categories",
-  sports: "tr_sports",
-  genders: "tr_genders",
-};
+import type { Trainer, TrainerSort } from "@/lib/types";
 
 const categoryIcons: Record<string, typeof Dumbbell> = {
   gym: Dumbbell,
@@ -59,22 +43,21 @@ const sortOptions: { id: TrainerSort; label: string }[] = [
   { id: "price", label: "Price: low to high" },
 ];
 
+/**
+ * The search-and-filter engine for a city hub page. The server passes
+ * trainers already scoped to the city, so there is no city state here — and
+ * deliberately no localStorage: filters live in this visit only, seeded from
+ * the `?cat=` URL param (how the home hero hands over its selection).
+ */
 export function TrainerListingClient({
   trainers,
-  stories = [],
-  initialQuery = "",
-  initialCity = "",
   initialCategories = [],
 }: {
   trainers: Trainer[];
-  stories?: Story[];
-  initialQuery?: string;
-  initialCity?: string;
   initialCategories?: string[];
 }) {
-  const [query, setQuery] = useState(initialQuery);
+  const [query, setQuery] = useState("");
   const [sort, setSort] = useState<TrainerSort>("recommended");
-  const [city, setCity] = useState(initialCity);
   const [categories, setCategories] = useState<string[]>(initialCategories);
   const [sports, setSports] = useState<string[]>([]);
   const [specialties, setSpecialties] = useState<string[]>([]);
@@ -83,72 +66,39 @@ export function TrainerListingClient({
   // sheet is a separate toggle.
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [dialog, setDialog] = useState<PreferenceDialog>(null);
+  const [dialog, setDialog] = useState<"categories" | "sports" | null>(null);
 
-  // Load saved preferences once. URL params always win, and the first-visit
-  // dialog never opens when the visitor arrived with an explicit choice.
+  // The page is statically generated, so the `?cat=` handoff (from the home
+  // hero or an SEO landing page) is applied after hydration. Arriving as a
+  // Sports Coach seeker drops the visitor straight into narrowing by sport.
   useEffect(() => {
-    const cameWithIntent = Boolean(initialCity || initialCategories.length > 0);
-
-    const timeoutId = window.setTimeout(() => {
-      try {
-        const storedCity = localStorage.getItem(STORAGE_KEYS.city);
-        const storedCategories = parseStoredList(
-          // `tr_goals` is the pre-overhaul key; read it once for continuity.
-          localStorage.getItem(STORAGE_KEYS.categories) ??
-            localStorage.getItem("tr_goals"),
-          (id) => searchCategories.some((category) => category.id === id),
-        );
-        const storedSports = parseStoredList(
-          localStorage.getItem(STORAGE_KEYS.sports),
-        );
-        const storedGenders = parseStoredList(
-          localStorage.getItem(STORAGE_KEYS.genders),
-          isTrainerGenderOption,
-        ) as TrainerGenderOptionId[];
-
-        if (!initialCity && storedCity) {
-          setCity(storedCity);
-        }
-
-        setGenders(storedGenders);
-
-        if (initialCategories.length === 0 && storedCategories.length > 0) {
-          setCategories(storedCategories);
-          setSports(storedSports);
-        }
-
-        if (cameWithIntent) {
-          localStorage.setItem(STORAGE_KEYS.onboarded, "1");
-          if (initialCity) {
-            localStorage.setItem(STORAGE_KEYS.city, initialCity);
-          }
-          if (initialCategories.length > 0) {
-            localStorage.setItem(
-              STORAGE_KEYS.categories,
-              JSON.stringify(initialCategories),
-            );
-          }
-          // Arriving as a Sports Coach seeker (e.g. from the home hero) drops
-          // the visitor straight into narrowing by sport.
-          if (initialCategories.includes(SPORT_CATEGORY_ID)) {
-            setDialog("sports");
-          }
-        } else if (localStorage.getItem(STORAGE_KEYS.onboarded) !== "1") {
-          setDialog("onboarding");
-        }
-      } catch {
-        if (!cameWithIntent) {
-          setDialog("onboarding");
-        }
+    if (initialCategories.length > 0) {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = Array.from(
+      new Set(
+        (params.get("cat") ?? "")
+          .split(",")
+          .map((value) => value.trim())
+          .filter((id) =>
+            searchCategories.some((category) => category.id === id),
+          ),
+      ),
+    );
+    if (fromUrl.length > 0) {
+      // Post-hydration by necessity: the page is statically generated, so the
+      // URL can't be read during the server render or state initialization.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCategories(fromUrl);
+      if (fromUrl.includes(SPORT_CATEGORY_ID)) {
+        setDialog("sports");
       }
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The marketplace's known sports are whatever trainers entered at onboarding.
+  // The city's known sports are whatever its coaches entered at onboarding.
   const knownSports = useMemo(
     () =>
       Array.from(new Set(trainers.flatMap((trainer) => trainer.sports)))
@@ -167,97 +117,63 @@ export function TrainerListingClient({
     [trainers],
   );
 
-  // Global stories link to the article on their author's profile, so we need
-  // each story's trainer slug (stories only carry the trainer id).
-  const slugByTrainerId = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const trainer of trainers) {
-      map.set(trainer.id, trainer.slug);
-    }
-    return map;
-  }, [trainers]);
-
   const results = useMemo(
     () =>
       filterAndSortTrainers(trainers, {
         query,
-        city,
         sort,
         categories,
         sports,
         specialties,
         genders,
       }),
-    [trainers, query, city, sort, categories, sports, specialties, genders],
+    [trainers, query, sort, categories, sports, specialties, genders],
   );
 
-  const activeCount =
-    categories.length + sports.length + specialties.length + genders.length;
-  const cityLabel = city || "All cities";
+  // The category selection lives in its own "what are you looking for" row;
+  // the Filters panel only holds the refinements.
+  const panelCount = sports.length + specialties.length + genders.length;
   const sportSelected = categories.includes(SPORT_CATEGORY_ID);
 
-  function persist(
-    nextCity: string,
-    nextCategories: string[],
-    nextSports: string[],
-    nextGenders: TrainerGenderOptionId[],
-  ) {
-    try {
-      localStorage.setItem(STORAGE_KEYS.onboarded, "1");
-      localStorage.setItem(STORAGE_KEYS.city, nextCity);
-      localStorage.setItem(
-        STORAGE_KEYS.categories,
-        JSON.stringify(nextCategories),
-      );
-      localStorage.setItem(STORAGE_KEYS.sports, JSON.stringify(nextSports));
-      localStorage.setItem(STORAGE_KEYS.genders, JSON.stringify(nextGenders));
-    } catch {
-      // Local storage can be blocked; UI state still works.
-    }
-  }
-
-  function saveCity(nextCity: string) {
-    setCity(nextCity);
-    persist(nextCity, categories, sports, genders);
-  }
-
   // Toggling a coach type never touches the speciality filter — the two are
-  // fully decoupled. Turning the sport category on opens the sports picker;
-  // turning it off clears any chosen sports.
+  // fully decoupled. Turning the sport category off clears any chosen sports;
+  // turning it on hands over to the sports picker when the dialog closes.
   function toggleCategory(id: string) {
     const active = categories.includes(id);
-    const nextCategories = active
-      ? categories.filter((item) => item !== id)
-      : [...categories, id];
-
-    let nextSports = sports;
-    if (id === SPORT_CATEGORY_ID) {
-      if (active) {
-        nextSports = [];
-        setSports(nextSports);
-      } else {
-        setDialog("sports");
-      }
+    setCategories(
+      active
+        ? categories.filter((item) => item !== id)
+        : [...categories, id],
+    );
+    if (id === SPORT_CATEGORY_ID && active) {
+      setSports([]);
     }
+  }
 
-    setCategories(nextCategories);
-    persist(city, nextCategories, nextSports, genders);
+  // Leaving the coach-type dialog as a Sports Coach seeker without chosen
+  // sports flows straight into narrowing by sport.
+  function closeCategoryDialog() {
+    setDialog(
+      categories.includes(SPORT_CATEGORY_ID) && sports.length === 0
+        ? "sports"
+        : null,
+    );
   }
 
   function toggleSport(sport: string) {
-    const next = sports.includes(sport)
-      ? sports.filter((item) => item !== sport)
-      : [...sports, sport];
-    setSports(next);
-    persist(city, categories, next, genders);
+    setSports((current) =>
+      current.includes(sport)
+        ? current.filter((item) => item !== sport)
+        : [...current, sport],
+    );
   }
 
   function toggleGender(gender: TrainerGenderOptionId) {
-    const next = genders.includes(gender)
-      ? genders.filter((item) => item !== gender)
-      : [...genders, gender];
-    setGenders(next);
-    persist(city, categories, sports, next);
+    setGenders((current) =>
+      current.includes(gender)
+        ? current.filter((item) => item !== gender)
+        : [...current, gender],
+    );
   }
 
   function toggleSpecialty(tag: string) {
@@ -268,36 +184,25 @@ export function TrainerListingClient({
     );
   }
 
-  function clearAll() {
-    setCategories([]);
+  // Clears the refinements only — the "what are you looking for" choice is
+  // the visitor's intent, not a filter to sweep away.
+  function clearRefinements() {
     setSports([]);
     setSpecialties([]);
     setGenders([]);
-    persist(city, [], [], []);
-  }
-
-  function skipOnboarding() {
-    try {
-      localStorage.setItem(STORAGE_KEYS.onboarded, "1");
-    } catch {
-      // Non-fatal.
-    }
-    setDialog(null);
   }
 
   const panelProps = {
-    categories,
     sports,
     genders,
     specialties,
     specialityOptions,
     sportSelected,
-    onToggleCategory: toggleCategory,
     onEditSports: () => setDialog("sports"),
     onRemoveSport: toggleSport,
     onToggleGender: toggleGender,
     onToggleSpecialty: toggleSpecialty,
-    onClear: clearAll,
+    onClear: clearRefinements,
   };
 
   return (
@@ -305,7 +210,7 @@ export function TrainerListingClient({
       <div
         className={`desktop-listing-layout ${
           filtersCollapsed ? "desktop-listing-layout--collapsed" : ""
-        } mx-auto grid max-w-7xl gap-6 px-4 py-5 sm:px-6 lg:px-0 lg:py-8`}
+        } grid gap-6`}
       >
         {!filtersCollapsed ? (
           <aside className="hidden lg:block">
@@ -320,61 +225,7 @@ export function TrainerListingClient({
 
         <section className="min-w-0">
           <div className="mb-5 border-b border-white/10 pb-5">
-            <div className="flex items-center gap-3">
-              <Link
-                href="/"
-                aria-label="Back to home"
-                className="grid h-12 w-12 flex-none place-items-center rounded-[14px] border border-white/10 bg-panel text-white transition hover:border-brand/50 hover:text-brand-light"
-              >
-                <ArrowLeft aria-hidden="true" size={20} />
-              </Link>
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-muted">
-                  Coaches in
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setDialog("city")}
-                  className="mt-0.5 inline-flex max-w-full items-center gap-1.5 text-left font-display text-[26px] font-black leading-none text-white transition hover:text-brand-light md:text-[34px]"
-                >
-                  <span className="truncate">{cityLabel}</span>
-                  <ChevronDown
-                    aria-hidden="true"
-                    className="flex-none text-brand-light"
-                    size={18}
-                  />
-                </button>
-              </div>
-            </div>
-
-            {stories.length > 0 ? (
-              <div className="mt-5">
-                <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-muted">
-                  Stories from our coaches
-                </p>
-                <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 scrollbar-none">
-                  {stories.map((story) => {
-                    const slug = story.trainerId
-                      ? slugByTrainerId.get(story.trainerId)
-                      : undefined;
-                    return (
-                      <StoryCard
-                        key={story.id}
-                        story={story}
-                        size="banner"
-                        href={
-                          slug
-                            ? `/trainers/${slug}/stories/${story.id}`
-                            : undefined
-                        }
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-
-            <div className="relative mt-4">
+            <div className="relative">
               <Search
                 aria-hidden="true"
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-muted"
@@ -389,6 +240,16 @@ export function TrainerListingClient({
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setDialog("categories")}
+                className="inline-flex h-10 flex-none items-center gap-2 rounded-full border border-white/10 bg-panel px-3.5 text-[12px] font-extrabold text-white transition hover:border-brand/40"
+              >
+                <Search aria-hidden="true" size={15} />
+                What are you looking for?
+                <FilterBadge count={categories.length} />
+              </button>
+
               {filtersCollapsed ? (
                 <button
                   type="button"
@@ -397,7 +258,7 @@ export function TrainerListingClient({
                 >
                   <SlidersHorizontal aria-hidden="true" size={15} />
                   Filters
-                  <FilterBadge count={activeCount} />
+                  <FilterBadge count={panelCount} />
                 </button>
               ) : null}
 
@@ -408,7 +269,7 @@ export function TrainerListingClient({
               >
                 <SlidersHorizontal aria-hidden="true" size={15} />
                 Filters
-                <FilterBadge count={activeCount} />
+                <FilterBadge count={panelCount} />
               </button>
 
               <SortControl sort={sort} onSort={setSort} />
@@ -442,10 +303,10 @@ export function TrainerListingClient({
                 />
               ))}
 
-              {activeCount > 0 ? (
+              {panelCount > 0 ? (
                 <button
                   type="button"
-                  onClick={clearAll}
+                  onClick={clearRefinements}
                   className="h-10 flex-none rounded-full px-2 text-[12px] font-bold text-brand-light transition hover:text-white"
                 >
                   Clear all
@@ -457,7 +318,7 @@ export function TrainerListingClient({
           <div className="mb-4">
             <p className="text-sm font-semibold text-muted">
               <span className="font-extrabold text-white">{results.length}</span>{" "}
-              coaches matched
+              {results.length === 1 ? "coach" : "coaches"} matched
             </p>
           </div>
 
@@ -474,16 +335,17 @@ export function TrainerListingClient({
                 className="mx-auto text-muted"
                 size={28}
               />
-              <h2 className="mt-4 font-display text-xl font-black text-white">
+              <h3 className="mt-4 font-display text-xl font-black text-white">
                 No coaches match
-              </h2>
+              </h3>
               <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted">
-                Try clearing a filter or searching for a different speciality.
+                Try another coach type, clear a filter, or search for a
+                different speciality.
               </p>
-              {activeCount > 0 ? (
+              {panelCount > 0 ? (
                 <button
                   type="button"
-                  onClick={clearAll}
+                  onClick={clearRefinements}
                   className="mt-5 rounded-[12px] border border-brand/30 bg-brand/10 px-5 py-3 text-sm font-bold text-brand-light"
                 >
                   Clear all filters
@@ -529,32 +391,12 @@ export function TrainerListingClient({
         ) : null}
       </div>
 
-      {dialog === "onboarding" ? (
-        <OnboardingDialog
-          initialCity={city}
-          initialCategories={categories}
-          onSkip={skipOnboarding}
-          onSave={(nextCity, nextCategories) => {
-            setCity(nextCity);
-            setCategories(nextCategories);
-            persist(nextCity, nextCategories, sports, genders);
-            // If they signed up as a Sports Coach seeker, go straight into
-            // narrowing by sport.
-            setDialog(
-              nextCategories.includes(SPORT_CATEGORY_ID) ? "sports" : null,
-            );
-          }}
-        />
-      ) : null}
-
-      {dialog === "city" ? (
-        <CityDialog
-          initialCity={city}
-          onClose={() => setDialog(null)}
-          onSave={(nextCity) => {
-            saveCity(nextCity);
-            setDialog(null);
-          }}
+      {dialog === "categories" ? (
+        <CategoryDialog
+          selected={categories}
+          resultCount={results.length}
+          onToggle={toggleCategory}
+          onClose={closeCategoryDialog}
         />
       ) : null}
 
@@ -567,6 +409,85 @@ export function TrainerListingClient({
         />
       ) : null}
     </>
+  );
+}
+
+function CategoryDialog({
+  selected,
+  resultCount,
+  onToggle,
+  onClose,
+}: {
+  selected: string[];
+  resultCount: number;
+  onToggle: (id: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <DialogFrame
+      title="What are you looking for?"
+      kicker="Coach type"
+      onClose={onClose}
+    >
+      <div className="grid grid-cols-1 gap-2">
+        {searchCategories.map((category) => {
+          const active = selected.includes(category.id);
+          const Icon = categoryIcons[category.id] ?? Dumbbell;
+          return (
+            <button
+              key={category.id}
+              type="button"
+              onClick={() => onToggle(category.id)}
+              className={`flex items-center gap-4 rounded-[15px] border p-4 text-left transition ${
+                active
+                  ? "border-brand/60 bg-brand/10"
+                  : "border-white/10 bg-panel hover:border-white/20"
+              }`}
+            >
+              <span
+                className="grid h-11 w-11 flex-none place-items-center rounded-[13px]"
+                style={{
+                  backgroundColor: active ? category.tint : `${category.tint}22`,
+                  color: active ? "#ffffff" : category.tint,
+                }}
+              >
+                <Icon aria-hidden="true" size={21} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-display text-[15px] font-extrabold text-white">
+                  {category.label}
+                </span>
+                <span className="mt-1 block text-[12px] font-semibold text-muted">
+                  {category.description}
+                </span>
+              </span>
+              <span
+                className={`grid h-6 w-6 flex-none place-items-center rounded-full border ${
+                  active ? "border-brand bg-brand" : "border-white/20"
+                }`}
+              >
+                {active ? (
+                  <Check aria-hidden="true" className="text-white" size={14} />
+                ) : null}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-4 text-[12px] font-semibold leading-5 text-muted">
+        Pick the coach types you want. Choosing more than one shows all of
+        them.
+      </p>
+      <button
+        type="button"
+        onClick={onClose}
+        className="mt-5 h-12 w-full rounded-[14px] bg-brand px-5 text-sm font-extrabold text-white transition"
+      >
+        {selected.length > 0
+          ? `Show ${resultCount} ${resultCount === 1 ? "coach" : "coaches"}`
+          : "Show everyone"}
+      </button>
+    </DialogFrame>
   );
 }
 
@@ -639,13 +560,11 @@ function FilterChip({
 }
 
 function FilterPanel({
-  categories,
   sports,
   genders,
   specialties,
   specialityOptions,
   sportSelected,
-  onToggleCategory,
   onEditSports,
   onRemoveSport,
   onToggleGender,
@@ -653,13 +572,11 @@ function FilterPanel({
   onClear,
   onCollapse,
 }: {
-  categories: string[];
   sports: string[];
   genders: TrainerGenderOptionId[];
   specialties: string[];
   specialityOptions: string[];
   sportSelected: boolean;
-  onToggleCategory: (id: string) => void;
   onEditSports: () => void;
   onRemoveSport: (sport: string) => void;
   onToggleGender: (gender: TrainerGenderOptionId) => void;
@@ -691,52 +608,6 @@ function FilterPanel({
               <X aria-hidden="true" size={16} />
             </button>
           ) : null}
-        </div>
-      </div>
-
-      <div className="mb-6">
-        <p className="mb-3 text-[10px] font-extrabold uppercase text-muted">
-          Coach type
-        </p>
-        <div className="grid grid-cols-1 gap-2">
-          {searchCategories.map((category) => {
-            const Icon = categoryIcons[category.id] ?? Dumbbell;
-            const active = categories.includes(category.id);
-            return (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => onToggleCategory(category.id)}
-                className={`flex items-center gap-3 rounded-[13px] border p-3 text-left transition ${
-                  active
-                    ? "border-brand/60 bg-brand/10"
-                    : "border-white/10 bg-panel hover:border-white/20"
-                }`}
-              >
-                <span
-                  className="grid h-9 w-9 flex-none place-items-center rounded-[10px]"
-                  style={{
-                    backgroundColor: active
-                      ? category.tint
-                      : `${category.tint}22`,
-                    color: active ? "#ffffff" : category.tint,
-                  }}
-                >
-                  <Icon aria-hidden="true" size={17} />
-                </span>
-                <span className="min-w-0 flex-1 text-[13px] font-extrabold text-white">
-                  {category.shortLabel}
-                </span>
-                {active ? (
-                  <Check
-                    aria-hidden="true"
-                    className="flex-none text-brand-light"
-                    size={16}
-                  />
-                ) : null}
-              </button>
-            );
-          })}
         </div>
       </div>
 
@@ -915,7 +786,7 @@ function SportsDialog({
           </p>
           <p className="mt-2 text-sm leading-6 text-muted">
             {knownSports.length === 0
-              ? "As sports coaches join, the sports they coach show up here to search."
+              ? "As sports coaches join this city, the sports they coach show up here to search."
               : `Nothing matches “${query.trim()}”. Try another sport.`}
           </p>
         </div>
@@ -929,144 +800,6 @@ function SportsDialog({
         {selected.length > 0
           ? `Apply ${selected.length} sport${selected.length > 1 ? "s" : ""}`
           : "Show all sports coaches"}
-      </button>
-    </DialogFrame>
-  );
-}
-
-function OnboardingDialog({
-  initialCity,
-  initialCategories,
-  onSkip,
-  onSave,
-}: {
-  initialCity: string;
-  initialCategories: string[];
-  onSkip: () => void;
-  onSave: (city: string, categories: string[]) => void;
-}) {
-  const [step, setStep] = useState(0);
-  const [city, setCity] = useState(initialCity);
-  const [cityQuery, setCityQuery] = useState(initialCity);
-  const [categories, setCategories] = useState(initialCategories);
-  const canContinue = step === 0 ? Boolean(city) : true;
-
-  return (
-    <DialogFrame
-      title={
-        step === 0 ? "Which city are you training in?" : "Who are you looking for?"
-      }
-      kicker={step === 0 ? "Step 1 · Your city" : "Step 2 · Coach type"}
-      onClose={onSkip}
-    >
-      <div className="mb-5 flex gap-2">
-        {[0, 1].map((index) => (
-          <span
-            key={index}
-            className={`h-1.5 flex-1 rounded-full ${
-              index <= step ? "bg-brand" : "bg-white/10"
-            }`}
-          />
-        ))}
-      </div>
-
-      {step === 0 ? (
-        <CityStep
-          city={city}
-          query={cityQuery}
-          onQuery={(value) => {
-            setCityQuery(value);
-            setCity("");
-          }}
-          onSelect={(value) => {
-            setCity(value);
-            setCityQuery(value);
-          }}
-        />
-      ) : (
-        <CategoryStep
-          categories={categories}
-          onToggle={(id) => setCategories(toggleValue(categories, id))}
-        />
-      )}
-
-      <div className="mt-6 flex items-center gap-3">
-        {step === 1 ? (
-          <button
-            type="button"
-            onClick={() => setStep(0)}
-            className="h-12 rounded-[14px] border border-white/10 bg-panel px-5 text-sm font-extrabold text-white"
-          >
-            Back
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onSkip}
-            className="h-12 px-2 text-sm font-extrabold text-muted transition hover:text-white"
-          >
-            Skip
-          </button>
-        )}
-        <button
-          type="button"
-          disabled={!canContinue}
-          onClick={() => {
-            if (!canContinue) {
-              return;
-            }
-            if (step === 0) {
-              setStep(1);
-            } else {
-              onSave(city, categories);
-            }
-          }}
-          className="h-12 flex-1 rounded-[14px] bg-brand px-5 text-sm font-extrabold text-white transition disabled:bg-white/10 disabled:text-muted"
-        >
-          {step === 0
-            ? "Continue"
-            : categories.length > 0
-              ? "Show me coaches"
-              : "Show me everyone"}
-        </button>
-      </div>
-    </DialogFrame>
-  );
-}
-
-function CityDialog({
-  initialCity,
-  onClose,
-  onSave,
-}: {
-  initialCity: string;
-  onClose: () => void;
-  onSave: (city: string) => void;
-}) {
-  const [city, setCity] = useState(initialCity);
-  const [query, setQuery] = useState(initialCity);
-
-  return (
-    <DialogFrame title="Change city" kicker="Location" onClose={onClose}>
-      <CityStep
-        city={city}
-        query={query}
-        onQuery={(value) => {
-          setQuery(value);
-          setCity("");
-        }}
-        onSelect={(value) => {
-          setCity(value);
-          setQuery(value);
-        }}
-      />
-      <button
-        type="button"
-        disabled={!city}
-        onClick={() => onSave(city)}
-        className="mt-6 h-12 w-full rounded-[14px] bg-brand px-5 text-sm font-extrabold text-white transition disabled:bg-white/10 disabled:text-muted"
-      >
-        Save city
       </button>
     </DialogFrame>
   );
@@ -1108,178 +841,4 @@ function DialogFrame({
       </div>
     </div>
   );
-}
-
-function CityStep({
-  city,
-  query,
-  onQuery,
-  onSelect,
-}: {
-  city: string;
-  query: string;
-  onQuery: (value: string) => void;
-  onSelect: (value: string) => void;
-}) {
-  const filteredCities = cityOptions.filter((option) =>
-    option.name.toLowerCase().includes(query.trim().toLowerCase()),
-  );
-
-  return (
-    <div>
-      <div className="relative">
-        <Search
-          aria-hidden="true"
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-muted"
-          size={18}
-        />
-        <input
-          value={query}
-          onChange={(event) => onQuery(event.target.value)}
-          placeholder="Search your city"
-          className="h-13 w-full rounded-[14px] border border-white/10 bg-panel py-3.5 pl-12 pr-4 text-sm font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand/60"
-        />
-      </div>
-
-      <div className="mt-4 grid grid-cols-1 gap-2">
-        {filteredCities.map((option) => {
-          const selected = city === option.name;
-          return (
-            <button
-              key={option.name}
-              type="button"
-              onClick={() => onSelect(option.name)}
-              className={`flex items-center gap-3 rounded-[14px] border p-4 text-left transition ${
-                selected
-                  ? "border-brand/60 bg-brand/10"
-                  : "border-white/10 bg-panel hover:border-white/20"
-              }`}
-            >
-              <MapPin
-                aria-hidden="true"
-                className={selected ? "text-brand-light" : "text-muted"}
-                size={18}
-              />
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-extrabold text-white">
-                  {option.name}
-                </span>
-                <span className="mt-1 block text-[12px] font-semibold text-muted">
-                  {option.note}
-                </span>
-              </span>
-              {selected ? (
-                <Check aria-hidden="true" className="text-brand-light" size={18} />
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-
-      {filteredCities.length === 0 ? (
-        <div className="mt-5 rounded-[16px] border border-white/10 bg-panel p-5 text-center">
-          <p className="font-extrabold text-white">We are not there yet</p>
-          <p className="mt-2 text-sm leading-6 text-muted">
-            Try the nearest metro for now. We will add more cities as supply
-            comes online.
-          </p>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function CategoryStep({
-  categories,
-  onToggle,
-}: {
-  categories: string[];
-  onToggle: (id: string) => void;
-}) {
-  return (
-    <div>
-      <div className="grid grid-cols-1 gap-2">
-        {searchCategories.map((category) => {
-          const selected = categories.includes(category.id);
-          const Icon = categoryIcons[category.id] ?? Dumbbell;
-          return (
-            <button
-              key={category.id}
-              type="button"
-              onClick={() => onToggle(category.id)}
-              className={`flex items-center gap-4 rounded-[15px] border p-4 text-left transition ${
-                selected
-                  ? "border-brand/60 bg-brand/10"
-                  : "border-white/10 bg-panel hover:border-white/20"
-              }`}
-            >
-              <span
-                className="grid h-11 w-11 flex-none place-items-center rounded-[13px]"
-                style={{
-                  backgroundColor: selected
-                    ? category.tint
-                    : `${category.tint}22`,
-                  color: selected ? "#ffffff" : category.tint,
-                }}
-              >
-                <Icon aria-hidden="true" size={21} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-display text-[15px] font-extrabold text-white">
-                  {category.label}
-                </span>
-                <span className="mt-1 block text-[12px] font-semibold text-muted">
-                  {category.description}
-                </span>
-              </span>
-              <span
-                className={`grid h-6 w-6 flex-none place-items-center rounded-full border ${
-                  selected
-                    ? "border-brand bg-brand"
-                    : "border-white/20 bg-transparent"
-                }`}
-              >
-                {selected ? (
-                  <Check aria-hidden="true" className="text-white" size={14} />
-                ) : null}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <p className="mt-4 text-[12px] font-semibold leading-5 text-muted">
-        Pick the coach types you want — you can narrow by sport and speciality
-        next. Choosing more than one shows all of them.
-      </p>
-    </div>
-  );
-}
-
-function parseStoredList(
-  value: string | null,
-  isValid?: (item: string) => boolean,
-) {
-  if (!value) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(value);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed.filter(
-      (item): item is string =>
-        typeof item === "string" && (!isValid || isValid(item)),
-    );
-  } catch {
-    return [];
-  }
-}
-
-function toggleValue(values: string[], value: string) {
-  return values.includes(value)
-    ? values.filter((item) => item !== value)
-    : [...values, value];
 }

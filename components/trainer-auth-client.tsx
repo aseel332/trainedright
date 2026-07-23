@@ -460,7 +460,7 @@ export function TrainerAuthClient({
               <p className="mt-6 text-[12px] font-semibold leading-5 text-muted">
                 Looking to hire a coach instead?{" "}
                 <Link
-                  href="/trainers"
+                  href="/"
                   className="font-extrabold text-brand-light transition hover:text-brand"
                 >
                   Browse trainers

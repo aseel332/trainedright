@@ -8,9 +8,11 @@ import { TrainerCard } from "@/components/trainer-card";
 import { cityOptions } from "@/lib/search-categories";
 import {
   cityBySlug,
+  cityHubHref,
   citySlugOf,
+  isCityLaunched,
+  launchedCities,
   professionBySlug,
-  searchHrefFor,
   seoProfessions,
   type SeoProfession,
 } from "@/lib/seo-pages";
@@ -27,12 +29,12 @@ import type { Trainer } from "@/lib/types";
 export const revalidate = 3600;
 export const dynamicParams = false;
 
-type LandingParams = { profession: string; city: string };
+type LandingParams = { slug: string; city: string };
 
 export function generateStaticParams(): LandingParams[] {
   return seoProfessions.flatMap((profession) =>
-    cityOptions.map((city) => ({
-      profession: profession.slug,
+    launchedCities.map((city) => ({
+      slug: profession.slug,
       city: citySlugOf(city.name),
     })),
   );
@@ -88,7 +90,7 @@ export async function generateMetadata({
 }: {
   params: Promise<LandingParams>;
 }): Promise<Metadata> {
-  const { profession: professionSlug, city: cSlug } = await params;
+  const { slug: professionSlug, city: cSlug } = await params;
   const profession = professionBySlug(professionSlug);
   const city = cityBySlug(cSlug);
 
@@ -124,7 +126,7 @@ export default async function ProfessionCityPage({
 }: {
   params: Promise<LandingParams>;
 }) {
-  const { profession: professionSlug, city: cSlug } = await params;
+  const { slug: professionSlug, city: cSlug } = await params;
   const profession = professionBySlug(professionSlug);
   const city = cityBySlug(cSlug);
 
@@ -135,7 +137,9 @@ export default async function ProfessionCityPage({
   const trainers = await landingTrainers(profession, city.name);
   const faqs = buildFaqs(profession, city.name, trainers);
   const pluralLower = profession.plural.toLowerCase();
-  const otherCities = cityOptions.filter((option) => option.name !== city.name);
+  const otherCities = cityOptions.filter(
+    (option) => option.name !== city.name && isCityLaunched(option.name),
+  );
   const otherProfessions = seoProfessions.filter(
     (option) => option.slug !== profession.slug,
   );
@@ -229,11 +233,19 @@ export default async function ProfessionCityPage({
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
-              href={searchHrefFor(profession, city.name)}
+              href={`/${cSlug}`}
+              className="inline-flex min-h-11 items-center gap-2 rounded-[14px] bg-brand px-5 py-2.5 text-sm font-extrabold text-white transition hover:bg-brand-dark"
+            >
+              <MapPin aria-hidden="true" size={16} />
+              Explore the {city.name} hub
+              <ArrowRight aria-hidden="true" size={15} />
+            </Link>
+            <Link
+              href={cityHubHref(city.name, profession)}
               className="inline-flex min-h-11 items-center gap-2 rounded-[14px] border border-white/15 bg-white/[0.05] px-5 py-2.5 text-sm font-extrabold text-white transition hover:border-brand/50"
             >
               <SlidersHorizontal aria-hidden="true" size={16} />
-              Filter &amp; compare in full search
+              Search with filters
             </Link>
           </div>
         </header>
@@ -257,10 +269,10 @@ export default async function ProfessionCityPage({
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-3">
               <Link
-                href="/trainers"
+                href={`/${cSlug}`}
                 className="inline-flex min-h-11 items-center gap-2 rounded-[14px] bg-brand px-5 py-2.5 text-sm font-extrabold text-white transition hover:bg-brand-dark"
               >
-                Browse all coaches
+                Explore {city.name}
                 <ArrowRight aria-hidden="true" size={16} />
               </Link>
               <Link
@@ -315,23 +327,27 @@ export default async function ProfessionCityPage({
         </section>
 
         <section className="mt-12">
-          <h2 className="font-display text-[18px] font-black text-soft">
-            {profession.plural} in other cities
-          </h2>
-          <ul className="mt-4 flex flex-wrap gap-2">
-            {otherCities.map((option) => (
-              <li key={option.name}>
-                <Link
-                  href={`/${profession.slug}/${citySlugOf(option.name)}`}
-                  className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[13px] font-bold text-soft transition hover:border-brand/50 hover:text-white"
-                >
-                  {profession.plural} in {option.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {otherCities.length > 0 ? (
+            <>
+              <h2 className="font-display text-[18px] font-black text-soft">
+                {profession.plural} in other cities
+              </h2>
+              <ul className="mt-4 flex flex-wrap gap-2">
+                {otherCities.map((option) => (
+                  <li key={option.name}>
+                    <Link
+                      href={`/${profession.slug}/${citySlugOf(option.name)}`}
+                      className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[13px] font-bold text-soft transition hover:border-brand/50 hover:text-white"
+                    >
+                      {profession.plural} in {option.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
 
-          <h2 className="mt-8 font-display text-[18px] font-black text-soft">
+          <h2 className={`${otherCities.length > 0 ? "mt-8 " : ""}font-display text-[18px] font-black text-soft`}>
             More coach types in {city.name}
           </h2>
           <ul className="mt-4 flex flex-wrap gap-2">

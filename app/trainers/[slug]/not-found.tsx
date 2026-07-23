@@ -11,7 +11,7 @@ export default function NotFound() {
           This coach profile is not available.
         </h1>
         <Link
-          href="/trainers"
+          href="/"
           className="mt-6 inline-flex rounded-full bg-brand px-5 py-3 text-sm font-extrabold text-white"
         >
           Browse coaches

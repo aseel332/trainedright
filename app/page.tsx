@@ -5,6 +5,7 @@ import {
   ArrowRight,
   BadgeCheck,
   CalendarCheck,
+  MapPin,
   MessageCircle,
   Search,
   Star,
@@ -16,7 +17,12 @@ import { SiteHeader } from "@/components/site-header";
 import { StoryCard } from "@/components/story-card";
 import { TrainerCard } from "@/components/trainer-card";
 import { getFeaturedStories, getTrainers } from "@/lib/server/data";
-import { searchCategories } from "@/lib/search-categories";
+import { cityOptions, searchCategories } from "@/lib/search-categories";
+import {
+  citySlugOf,
+  isCityLaunched,
+  professionForCategory,
+} from "@/lib/seo-pages";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -120,7 +126,7 @@ export default async function Home() {
           {searchCategories.map((category) => (
             <Link
               key={category.id}
-              href={`/trainers?cat=${category.id}`}
+              href={`/${professionForCategory(category.id)?.slug ?? ""}`}
               className="group rounded-[20px] border border-white/10 bg-panel p-5 transition hover:-translate-y-0.5 hover:border-brand/40 hover:bg-panel-strong"
             >
               <span
@@ -201,10 +207,10 @@ export default async function Home() {
               </h2>
             </div>
             <Link
-              href="/trainers"
+              href="#cities"
               className="hidden flex-none items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-4 py-2.5 text-sm font-extrabold text-brand-light transition hover:bg-brand/15 md:inline-flex"
             >
-              See all coaches
+              Browse by city
               <ArrowRight aria-hidden="true" size={16} />
             </Link>
           </div>
@@ -214,14 +220,64 @@ export default async function Home() {
             ))}
           </div>
           <Link
-            href="/trainers"
+            href="#cities"
             className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-[14px] border border-brand/30 bg-brand/10 px-4 py-3 text-sm font-extrabold text-brand-light md:hidden"
           >
-            See all coaches
+            Browse by city
             <ArrowRight aria-hidden="true" size={16} />
           </Link>
         </section>
       ) : null}
+
+      {/* City hubs — every city gets its own page */}
+      <section id="cities" className="border-t border-white/10 bg-panel/40">
+        <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+          <div className="mb-6">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-brand-light">
+              Your city, your coaches
+            </p>
+            <h2 className="mt-2 font-display text-[30px] font-black leading-none md:text-[40px]">
+              Pick your city.
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {cityOptions.map((city) =>
+              isCityLaunched(city.name) ? (
+                <Link
+                  key={city.name}
+                  href={`/${citySlugOf(city.name)}`}
+                  className="group flex min-h-[84px] flex-col justify-center rounded-[18px] border border-white/10 bg-panel px-4 py-3 transition hover:-translate-y-0.5 hover:border-brand/40 hover:bg-panel-strong"
+                >
+                  <span className="inline-flex items-center gap-1.5 font-display text-[17px] font-black text-white">
+                    <MapPin
+                      aria-hidden="true"
+                      size={15}
+                      className="text-brand-light"
+                    />
+                    {city.name}
+                  </span>
+                  <span className="mt-1 text-[12px] font-semibold text-muted">
+                    {city.state}
+                  </span>
+                </Link>
+              ) : (
+                <div
+                  key={city.name}
+                  className="flex min-h-[84px] flex-col justify-center rounded-[18px] border border-white/5 bg-panel/50 px-4 py-3"
+                >
+                  <span className="inline-flex items-center gap-1.5 font-display text-[17px] font-black text-white/35">
+                    <MapPin aria-hidden="true" size={15} className="text-white/20" />
+                    {city.name}
+                  </span>
+                  <span className="mt-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white/25">
+                    Coming soon
+                  </span>
+                </div>
+              ),
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* Stories */}
       {stories.length > 0 ? (
@@ -295,11 +351,11 @@ export default async function Home() {
             </p>
           </div>
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-soft">
-            <Link href="/trainers" className="transition hover:text-white">
-              Find coaches
+            <Link href="#cities" className="transition hover:text-white">
+              Browse cities
             </Link>
             <Link href="/trainer" className="transition hover:text-white">
-              For trainers
+              I am a Trainer
             </Link>
             <Link
               href="/trainer/auth?mode=signin&next=/trainer/dashboard"

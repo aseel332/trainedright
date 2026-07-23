@@ -65,6 +65,23 @@ export const seoProfessions: SeoProfession[] = [
   },
 ];
 
+export type CityOption = (typeof cityOptions)[number];
+
+/**
+ * Cities that are actually live. Everything else renders as "coming soon"
+ * and has no pages, no links and no sitemap entries until it launches —
+ * add a name here to switch a city on.
+ */
+export const launchedCityNames = ["Ahmedabad"];
+
+export const launchedCities = cityOptions.filter((city) =>
+  launchedCityNames.includes(city.name),
+);
+
+export function isCityLaunched(cityName: string) {
+  return launchedCityNames.includes(cityName);
+}
+
 export function professionBySlug(slug: string) {
   return seoProfessions.find((profession) => profession.slug === slug) ?? null;
 }
@@ -78,17 +95,26 @@ export function cityBySlug(slug: string) {
   return cityOptions.find((city) => citySlugOf(city.name) === slug) ?? null;
 }
 
-/** The equivalent interactive search URL for a landing page. */
-export function searchHrefFor(profession: SeoProfession, cityName?: string) {
-  const params = new URLSearchParams();
-  if (cityName) {
-    params.set("city", cityName);
-  }
-  if (profession.categoryIds.length > 0) {
-    params.set("cat", profession.categoryIds.join(","));
-  }
-  const query = params.toString();
-  return query ? `/trainers?${query}` : "/trainers";
+/**
+ * The city hub URL (`/mumbai`), optionally pre-filtered to a profession —
+ * the hub's listing reads `?cat=` and seeds its filters from it.
+ */
+export function cityHubHref(cityName: string, profession?: SeoProfession) {
+  const base = `/${citySlugOf(cityName)}`;
+  return profession && profession.categoryIds.length > 0
+    ? `${base}?cat=${profession.categoryIds.join(",")}`
+    : base;
+}
+
+/** The profession page for a single search category ("gym" → personal-trainers). */
+export function professionForCategory(categoryId: string) {
+  return (
+    seoProfessions.find(
+      (profession) =>
+        profession.categoryIds.length === 1 &&
+        profession.categoryIds[0] === categoryId,
+    ) ?? null
+  );
 }
 
 /** Human label for a trainer's primary coach type ("Gym Trainer"). */

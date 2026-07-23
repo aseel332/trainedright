@@ -144,7 +144,7 @@ export function TransformationSubmitClient({
               {request.trainerName}&apos;s profile as client-confirmed proof.
             </p>
             <Link
-              href="/trainers"
+              href="/"
               className="mt-8 inline-flex items-center gap-2 rounded-[14px] border border-white/15 px-5 py-3 text-sm font-extrabold text-white transition hover:border-brand/50"
             >
               Browse coaches on TrainedRight

@@ -191,13 +191,11 @@ input {
     height: 176px;
   }
 
+  /* Embedded in the city page's own container, so no width/padding here. */
   .desktop-listing-layout {
-    width: min(100% - 64px, 1280px);
-    margin-inline: auto;
     display: grid;
     grid-template-columns: 320px minmax(0, 1fr);
     gap: 28px;
-    padding-block: 32px;
   }
 
   .desktop-listing-results {

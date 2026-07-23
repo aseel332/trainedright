@@ -110,8 +110,8 @@ export async function saveTrainerProfile(
   await sweepTrainerUploads(ctx.supabase, profile, ctx.user.id);
 
   revalidatePath("/trainer/dashboard");
-  revalidatePath("/trainers");
-  revalidatePath("/");
+  // One sweep over every cached page: city hubs, landing pages, home.
+  revalidatePath("/", "layout");
   if (published?.slug) {
     revalidatePath(`/trainers/${published.slug}`);
   }

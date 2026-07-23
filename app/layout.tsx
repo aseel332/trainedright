@@ -66,14 +66,6 @@ const webSiteJsonLd = {
   name: siteName,
   url: siteUrl,
   publisher: { "@id": `${siteUrl}/#organization` },
-  potentialAction: {
-    "@type": "SearchAction",
-    target: {
-      "@type": "EntryPoint",
-      urlTemplate: `${siteUrl}/trainers?q={search_term_string}`,
-    },
-    "query-input": "required name=search_term_string",
-  },
 };
 
 export default function RootLayout({
