@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { BadgeIcon } from "@/components/badge-icon";
 import { BookingBar } from "@/components/booking-bar";
+import { ExpandableBio } from "@/components/expandable-bio";
 import { InstagramIcon, XIcon, YoutubeIcon } from "@/components/social-icons";
 import { JsonLd } from "@/components/json-ld";
 import { ProfileActions } from "@/components/profile-actions";
@@ -175,9 +176,7 @@ export default async function TrainerDetailPage({
           <StatsGrid trainer={trainer} />
 
           <section className="mt-6">
-            <p className="max-w-4xl text-[15px] leading-7 text-soft md:text-base md:leading-8">
-              {trainer.bio}
-            </p>
+            <ExpandableBio bio={trainer.bio} />
             <div className="mt-4 flex flex-wrap gap-2">
               {trainer.tags.map((tag) => (
                 <span
