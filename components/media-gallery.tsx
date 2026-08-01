@@ -74,7 +74,12 @@ export function MediaGallery({ media }: { media: TrainerMedia[] }) {
               <video
                 src={activeVideo.src}
                 poster={active.posterUrl ?? undefined}
-                className="h-full w-full object-cover"
+                // object-contain, not cover: native mobile control bars are
+                // sized against the video's full (uncropped) frame, so
+                // cropping with object-cover makes them render oversized and
+                // misaligned, with their scrim hiding most of the visible
+                // picture.
+                className="h-full w-full object-contain"
                 autoPlay
                 muted
                 loop
