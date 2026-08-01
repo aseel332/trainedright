@@ -252,7 +252,7 @@ export default async function ProfessionCityPage({
 
         {trainers.length > 0 ? (
           <section aria-label={`${profession.plural} in ${city.name}`} className="mt-8">
-            <div className="grid gap-x-6 md:grid-cols-2 md:gap-y-4 xl:grid-cols-3">
+            <div className="grid gap-x-6 md:grid-cols-2 md:gap-y-4">
               {trainers.map((trainer) => (
                 <TrainerCard key={trainer.id} trainer={trainer} showPrice />
               ))}
