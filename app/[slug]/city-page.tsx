@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import { CityIcon } from "@/components/city-icon";
 import { JsonLd } from "@/components/json-ld";
 import { StoryCard } from "@/components/story-card";
@@ -99,40 +99,24 @@ export async function CityHubPage({ city }: { city: CityOption }) {
       <JsonLd data={breadcrumbJsonLd} />
       {trainers.length > 0 ? <JsonLd data={itemListJsonLd} /> : null}
 
-      {/* City header: nav row (back + wordmark), then the city identity on
-          its own line so nothing collides on small screens. */}
+      {/* City header: brand on the left, the current city — small, and a
+          link back to the hero so a trainer/visitor can switch cities. */}
       <header className="border-b border-white/10">
-        <div className="mx-auto w-full max-w-7xl px-4 pb-6 pt-4 sm:px-6 lg:px-8 lg:pb-7">
-          <div className="flex items-center justify-between gap-4">
-            <Link
-              href="/"
-              aria-label="Back to home"
-              className="grid h-10 w-10 flex-none place-items-center rounded-[12px] border border-white/10 bg-panel text-white transition hover:border-brand/50 hover:text-brand-light"
-            >
-              <ArrowLeft aria-hidden="true" size={18} />
-            </Link>
-            <Link
-              href="/"
-              className="flex-none font-display text-[16px] font-black leading-none text-white md:text-[18px]"
-            >
-              TRAINED<span className="text-brand">RIGHT</span>
-            </Link>
-          </div>
-
-          <div className="mt-5 flex items-center gap-4 md:gap-5">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-5 sm:px-6 lg:px-8">
+          <BrandLogo compact />
+          <Link
+            href="/"
+            aria-label={`${city.name} — change city`}
+            className="group flex flex-none flex-col items-end gap-1"
+          >
             <CityIcon
               city={cSlug}
-              className="h-11 w-auto flex-none text-soft/70 md:h-14"
+              className="h-8 w-auto text-soft/70 transition group-hover:text-brand-light md:h-9"
             />
-            <div className="min-w-0">
-              <h1 className="truncate font-display text-[34px] font-black leading-none md:text-[44px]">
-                {city.name}
-              </h1>
-              <p className="mt-1.5 text-[12px] font-semibold text-muted md:text-[13px]">
-                Find the right coach for your story.
-              </p>
-            </div>
-          </div>
+            <h1 className="text-[12px] font-extrabold text-white transition group-hover:text-brand-light md:text-[13px]">
+              {city.name}
+            </h1>
+          </Link>
         </div>
       </header>
 
