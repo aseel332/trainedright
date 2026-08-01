@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:3111/admin -o login.html)",
+      "Bash(nohup npx next start -p 3111)",
+      "Bash(curl -s http://localhost:3111/admin -o login2.html)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -m json.tool)",
+      "Bash(node -e ' *)",
+      "Bash(python3 -c 'import urllib.parse,sys; print\\(urllib.parse.quote\\(sys.argv[1], safe='\\\\'''\\\\''\\)\\)' https://scbfdgxbewreomfkdyme.supabase.co/storage/v1/object/public/trainer-uploads/b1d6386d-7e2f-4241-b656-8536cae0bf09/d07495d9-060a-4d31-8ea8-3836771a6262.jpeg)",
+      "Bash(curl -s 'http://localhost:3000/_next/image?url=__CMDSUB_OUTPUT__&w=640&q=75')",
+      "Bash(timeout 60 node -e ' *)",
+      "Bash(timeout 60 node --dns-result-order=ipv4first -e ' *)",
+      "Bash(curl -s -o /dev/null -w '  dns=%{time_namelookup}s connect=%{time_connect}s tls=%{time_appconnect}s firstbyte=%{time_starttransfer}s total=%{time_total}s size=%{size_download} speed=%{speed_download}B/s\\\\n' https://scbfdgxbewreomfkdyme.supabase.co/storage/v1/object/public/trainer-uploads/b1d6386d-7e2f-4241-b656-8536cae0bf09/d07495d9-060a-4d31-8ea8-3836771a6262.jpeg)",
+      "Bash(timeout 90 node -e ' *)",
+      "Bash(timeout 45 curl -s -o /dev/null -w 'curl: dns=%{time_namelookup}s connect=%{time_connect}s tls=%{time_appconnect}s firstbyte=%{time_starttransfer}s TOTAL=%{time_total}s size=%{size_download} speed=%{speed_download}B/s\\\\n' https://scbfdgxbewreomfkdyme.supabase.co/storage/v1/object/public/trainer-uploads/b1d6386d-7e2f-4241-b656-8536cae0bf09/d07495d9-060a-4d31-8ea8-3836771a6262.jpeg)",
+      "Bash(node storage-logic.cjs)",
+      "Bash(node -e \"console.log\\(require\\('/root/trainedright/node_modules/next/package.json'\\).version\\)\")",
+      "Bash(awk '/desktop-listing-layout/,/^}/' app/globals.css)"
+    ]
+  }
+}

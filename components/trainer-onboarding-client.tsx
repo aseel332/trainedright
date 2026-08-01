@@ -66,6 +66,7 @@ import {
 } from "@/lib/trainer-profile";
 import { planCadence, planDefaultName } from "@/lib/pricing";
 import { uploadPublicFile } from "@/lib/client/upload";
+import { ImageCropModal } from "@/components/image-crop-modal";
 
 type StepId =
   | "welcome"
@@ -802,15 +803,20 @@ export function StorefrontEditor({
 }) {
   const [uploading, setUploading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [pendingCrop, setPendingCrop] = useState<{
+    file: File;
+    key: "avatarUrl" | "coverUrl";
+  } | null>(null);
 
-  async function uploadSingle(
-    files: FileList | null,
-    key: "avatarUrl" | "coverUrl",
-  ) {
+  function uploadSingle(files: FileList | null, key: "avatarUrl" | "coverUrl") {
     const [file] = imageAssetsFrom(files);
     if (!file) {
       return;
     }
+    setPendingCrop({ file, key });
+  }
+
+  async function finishSingleUpload(file: File, key: "avatarUrl" | "coverUrl") {
     setUploading(true);
     const result = await uploadPublicFile(file, userId);
     // Only store a URL that actually persisted; a failed upload returns a
@@ -989,6 +995,25 @@ export function StorefrontEditor({
             <TrainerProfilePreview profile={profile} />
           </div>
         </div>
+      ) : null}
+
+      {pendingCrop ? (
+        <ImageCropModal
+          file={pendingCrop.file}
+          aspect={pendingCrop.key === "avatarUrl" ? 1 : 16 / 9}
+          shape={pendingCrop.key === "avatarUrl" ? "circle" : "rect"}
+          title={
+            pendingCrop.key === "avatarUrl"
+              ? "Frame your profile photo"
+              : "Frame your cover image"
+          }
+          onCancel={() => setPendingCrop(null)}
+          onConfirm={(cropped) => {
+            const { key } = pendingCrop;
+            setPendingCrop(null);
+            void finishSingleUpload(cropped, key);
+          }}
+        />
       ) : null}
     </div>
   );
@@ -1471,6 +1496,13 @@ export function PhotosEditor({
   const [uploading, setUploading] = useState(false);
   const [videoInput, setVideoInput] = useState("");
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [pendingCrop, setPendingCrop] = useState<{
+    file: File;
+    key: "avatarUrl" | "coverUrl";
+  } | null>(null);
+  const [galleryQueue, setGalleryQueue] = useState<File[]>([]);
+  const [galleryTotal, setGalleryTotal] = useState(0);
+  const galleryReady = useRef<File[]>([]);
 
   function addVideo() {
     const url = videoInput.trim();
@@ -1494,14 +1526,15 @@ export function PhotosEditor({
     update({ videos: profile.videos.filter((video) => video.id !== id) });
   }
 
-  async function uploadSingle(
-    files: FileList | null,
-    key: "avatarUrl" | "coverUrl",
-  ) {
+  function uploadSingle(files: FileList | null, key: "avatarUrl" | "coverUrl") {
     const [file] = imageAssetsFrom(files);
     if (!file) {
       return;
     }
+    setPendingCrop({ file, key });
+  }
+
+  async function finishSingleUpload(file: File, key: "avatarUrl" | "coverUrl") {
     setUploading(true);
     const result = await uploadPublicFile(file, userId);
     // Only store a URL that actually persisted; a failed upload returns a
@@ -1512,15 +1545,27 @@ export function PhotosEditor({
     setUploading(false);
   }
 
-  async function uploadGallery(files: FileList | null) {
+  function uploadGallery(files: FileList | null) {
     const assets = imageAssetsFrom(files);
     if (assets.length === 0) {
+      return;
+    }
+    galleryReady.current = [];
+    setGalleryTotal(assets.length);
+    setGalleryQueue(assets);
+  }
+
+  async function finishGalleryQueue() {
+    const files = galleryReady.current;
+    galleryReady.current = [];
+    setGalleryTotal(0);
+    if (files.length === 0) {
       return;
     }
     setUploading(true);
     const uploaded = (
       await Promise.all(
-        assets.map(async (file) => {
+        files.map(async (file) => {
           const result = await uploadPublicFile(file, userId);
           return { result, name: file.name };
         }),
@@ -1536,6 +1581,25 @@ export function PhotosEditor({
       }));
     update({ gallery: [...profile.gallery, ...uploaded] });
     setUploading(false);
+  }
+
+  function advanceGalleryQueue() {
+    setGalleryQueue((prev) => {
+      const next = prev.slice(1);
+      if (next.length === 0) {
+        void finishGalleryQueue();
+      }
+      return next;
+    });
+  }
+
+  function handleGalleryCropConfirm(cropped: File) {
+    galleryReady.current = [...galleryReady.current, cropped];
+    advanceGalleryQueue();
+  }
+
+  function handleGalleryCropCancel() {
+    advanceGalleryQueue();
   }
 
   return (
@@ -1605,7 +1669,7 @@ export function PhotosEditor({
                       ),
                     })
                   }
-                  className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-white opacity-0 backdrop-blur transition hover:bg-brand group-hover:opacity-100"
+                  className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-white backdrop-blur transition hover:bg-brand"
                 >
                   <X aria-hidden="true" size={14} />
                 </button>
@@ -1729,6 +1793,40 @@ export function PhotosEditor({
           <Loader2 aria-hidden="true" size={14} className="animate-spin" />
           Uploading…
         </p>
+      ) : null}
+
+      {pendingCrop ? (
+        <ImageCropModal
+          file={pendingCrop.file}
+          aspect={pendingCrop.key === "avatarUrl" ? 1 : 16 / 9}
+          shape={pendingCrop.key === "avatarUrl" ? "circle" : "rect"}
+          title={
+            pendingCrop.key === "avatarUrl"
+              ? "Frame your profile photo"
+              : "Frame your cover image"
+          }
+          onCancel={() => setPendingCrop(null)}
+          onConfirm={(cropped) => {
+            const { key } = pendingCrop;
+            setPendingCrop(null);
+            void finishSingleUpload(cropped, key);
+          }}
+        />
+      ) : null}
+
+      {galleryQueue[0] ? (
+        <ImageCropModal
+          file={galleryQueue[0]}
+          aspect={4 / 3}
+          title={
+            galleryTotal > 1
+              ? `Frame photo ${galleryTotal - galleryQueue.length + 1} of ${galleryTotal}`
+              : "Frame your photo"
+          }
+          confirmLabel={galleryQueue.length > 1 ? "Use & next" : "Use photo"}
+          onCancel={handleGalleryCropCancel}
+          onConfirm={handleGalleryCropConfirm}
+        />
       ) : null}
     </div>
   );

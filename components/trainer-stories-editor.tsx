@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { uploadPublicFile } from "@/lib/client/upload";
+import { ImageCropModal } from "@/components/image-crop-modal";
 import {
   isOptimizableImageUrl,
   isValidVideoLink,
@@ -471,16 +472,21 @@ function StoryMediaField({
   const [uploading, setUploading] = useState(false);
   const [videoInput, setVideoInput] = useState("");
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [pendingCrop, setPendingCrop] = useState<File | null>(null);
 
   const parsedVideo =
     media.kind === "video" && media.url ? parseVideoLink(media.url) : null;
   const hasMedia = media.url.trim().length > 0;
 
-  async function uploadImage(files: FileList | null) {
+  function selectImage(files: FileList | null) {
     const file = files?.[0];
     if (!file || !file.type.startsWith("image/")) {
       return;
     }
+    setPendingCrop(file);
+  }
+
+  async function uploadImage(file: File) {
     setUploading(true);
     const result = await uploadPublicFile(file, userId);
     setUploading(false);
@@ -574,7 +580,7 @@ function StoryMediaField({
             accept="image/*"
             className="sr-only"
             onChange={(event) => {
-              void uploadImage(event.target.files);
+              selectImage(event.target.files);
               event.target.value = "";
             }}
           />
@@ -617,6 +623,19 @@ function StoryMediaField({
         <p className="mt-2 text-[12px] font-semibold text-brand-light">
           {videoError}
         </p>
+      ) : null}
+
+      {pendingCrop ? (
+        <ImageCropModal
+          file={pendingCrop}
+          aspect={2}
+          title="Frame your story image"
+          onCancel={() => setPendingCrop(null)}
+          onConfirm={(cropped) => {
+            setPendingCrop(null);
+            void uploadImage(cropped);
+          }}
+        />
       ) : null}
     </div>
   );

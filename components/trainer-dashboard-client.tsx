@@ -70,6 +70,7 @@ import {
   type SubscriptionPlan,
 } from "@/lib/subscription-plans";
 import { uploadPublicFile } from "@/lib/client/upload";
+import { ImageCropModal } from "@/components/image-crop-modal";
 
 type SectionId =
   | "overview"
@@ -1729,16 +1730,24 @@ function TransformationsSectionPanel({
   const [uploading, setUploading] = useState<"before" | "after" | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingCrop, setPendingCrop] = useState<{
+    file: File;
+    slot: "before" | "after";
+  } | null>(null);
 
   const canCreate =
     clientName.trim().length > 0 &&
     (mode === "client_all" || (Boolean(beforeUrl) && Boolean(afterUrl)));
 
-  async function upload(files: FileList | null, slot: "before" | "after") {
+  function selectFile(files: FileList | null, slot: "before" | "after") {
     const file = files?.[0];
     if (!file || !file.type.startsWith("image/")) {
       return;
     }
+    setPendingCrop({ file, slot });
+  }
+
+  async function upload(file: File, slot: "before" | "after") {
     setUploading(slot);
     const result = await uploadPublicFile(file, userId);
     if (!result.persisted) {
@@ -1804,6 +1813,7 @@ function TransformationsSectionPanel({
   }
 
   return (
+    <>
     <Panel
       title="Client transformations"
       note="Both flows end with the client confirming through a private link, so every transformation is client-backed."
@@ -1925,7 +1935,7 @@ function TransformationsSectionPanel({
                       accept="image/*"
                       className="sr-only"
                       onChange={(event) => {
-                        void upload(event.target.files, slot);
+                        selectFile(event.target.files, slot);
                         event.target.value = "";
                       }}
                     />
@@ -2062,6 +2072,20 @@ function TransformationsSectionPanel({
         )}
       </div>
     </Panel>
+    {pendingCrop ? (
+      <ImageCropModal
+        file={pendingCrop.file}
+        aspect={4 / 5}
+        title={`Frame the ${pendingCrop.slot} photo`}
+        onCancel={() => setPendingCrop(null)}
+        onConfirm={(cropped) => {
+          const { slot } = pendingCrop;
+          setPendingCrop(null);
+          void upload(cropped, slot);
+        }}
+      />
+    ) : null}
+    </>
   );
 }
 
