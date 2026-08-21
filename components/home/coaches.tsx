@@ -28,7 +28,9 @@ export function HomeCoaches({
   }
 
   return (
-    <section className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+    // Tighter on top than the other sections: this one is meant to start
+    // inside the first screen, not below it.
+    <section className="mx-auto w-full max-w-7xl px-4 pb-12 pt-8 sm:px-6 sm:pt-10 lg:px-8 lg:py-16">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
           <h2 className="font-display text-[28px] font-black leading-[1.05] tracking-[-0.015em] md:text-[36px]">
@@ -50,7 +52,7 @@ export function HomeCoaches({
         </Link>
       </div>
 
-      <div className="desktop-trainer-grid mt-6 grid gap-0 md:grid-cols-2 md:gap-4">
+      <div className="desktop-trainer-grid mt-5 grid gap-0 md:grid-cols-2 md:gap-4 lg:mt-6">
         {trainers.map((trainer) => (
           <TrainerCard key={trainer.id} trainer={trainer} showPrice />
         ))}

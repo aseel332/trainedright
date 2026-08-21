@@ -13,57 +13,6 @@ import { formatPriceInr } from "@/lib/trainer-utils";
 import type { HomeNumbers, HomeReview } from "@/lib/server/home-content";
 import type { Trainer } from "@/lib/types";
 
-/** Enough cards to fill the wall at every breakpoint; the rest is clipped. */
-const BACKDROP_TILES = 18;
-
-/**
- * The hero backdrop: a wall of the coaches' own profile cards, desaturated and
- * dropped to a whisper behind the type.
- *
- * Deliberately kept as separate rounded cards with gaps rather than an
- * edge-to-edge mosaic — butted together, the joins between photos read as an
- * accident, while a card grid reads as a decision. They keep a portrait aspect
- * ratio for the same reason: stretched to fill the section they stop looking
- * like profile cards at all.
- *
- * Same people as the listings below, so the texture is never stock decoration —
- * but at this opacity nobody is asked to read it.
- */
-function HeroBackdrop({ trainers }: { trainers: Trainer[] }) {
-  if (trainers.length === 0) {
-    return null;
-  }
-
-  // Repeat the roster until the wall is full: a small marketplace still gets a
-  // complete backdrop rather than a half-empty one.
-  const tiles = Array.from(
-    { length: BACKDROP_TILES },
-    (_, index) => trainers[index % trainers.length],
-  );
-
-  return (
-    <div aria-hidden="true" className="absolute inset-0 overflow-hidden">
-      <div className="hero-collage grid grid-cols-3 gap-3 p-3 sm:grid-cols-4 lg:grid-cols-6">
-        {tiles.map((trainer, index) => (
-          <div
-            key={`${trainer.id}-${index}`}
-            className="relative aspect-[3/4] overflow-hidden rounded-[14px]"
-          >
-            <Image
-              src={trainer.cardImageUrl}
-              alt=""
-              fill
-              unoptimized={!isOptimizableImageUrl(trainer.cardImageUrl)}
-              className="object-cover"
-              sizes="(min-width: 1024px) 17vw, (min-width: 640px) 25vw, 33vw"
-            />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /**
  * The coach stack beside the headline: real published coaches, their own
  * photos, ratings and prices.
@@ -211,7 +160,7 @@ function HeroStats({ numbers }: { numbers: HomeNumbers }) {
   stats.push({ icon: ShieldCheck, text: "No booking fee" });
 
   return (
-    <dl className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2.5">
+    <dl className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 lg:mt-5">
       {stats.map((stat) => {
         const Icon = stat.icon;
         return (
@@ -252,14 +201,11 @@ export function HomeHero({
   const subtitle = fillCity(settings.hero.subtitle, numbers.primaryCity);
 
   return (
-    // Copy sits at the bottom on a phone so the wall owns the top of the
-    // screen; centred from lg up, where the two-column layout balances itself.
-    <section className="hero-shell hero-surface relative isolate flex flex-col justify-end overflow-hidden border-b border-white/8 lg:justify-center">
-      <HeroBackdrop trainers={trainers} />
-      {/* Guarantees headline contrast whatever the photos behind it are. */}
-      <div aria-hidden="true" className="hero-veil absolute inset-0" />
-
-      <div className="relative mx-auto w-full max-w-7xl px-4 pb-12 pt-10 sm:px-6 sm:pb-14 lg:px-8 lg:py-16">
+    // No artwork here by design. With nothing decorative to look at, the hero's
+    // job is to get out of the way — the padding is tuned so the first real
+    // coach card lands inside the phone viewport rather than a scroll below it.
+    <section className="hero-surface relative isolate overflow-hidden border-b border-white/8">
+      <div className="relative mx-auto w-full max-w-7xl px-4 pb-9 pt-9 sm:px-6 sm:pb-12 sm:pt-12 lg:px-8 lg:py-20">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:items-center lg:gap-14">
           <div className="min-w-0">
             <h1 className="font-display text-[42px] font-black leading-[1.02] tracking-[-0.025em] sm:text-[58px] lg:text-[68px]">
@@ -267,12 +213,12 @@ export function HomeHero({
             </h1>
 
             {subtitle ? (
-              <p className="mt-4 max-w-lg text-[15px] font-medium leading-6 text-soft md:text-[17px] md:leading-7">
+              <p className="mt-3.5 max-w-lg text-[15px] font-medium leading-6 text-soft md:text-[17px] md:leading-7">
                 {subtitle}
               </p>
             ) : null}
 
-            <div className="mt-7 max-w-3xl">
+            <div className="mt-6 max-w-3xl lg:mt-7">
               <HomeHeroSearch
                 cities={cities}
                 goals={goals}

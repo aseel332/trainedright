@@ -62,7 +62,8 @@
       "Bash(node /home/aseel332/projects/trainedright/probe2-tmp.mjs)",
       "Bash(node mobile.mjs)",
       "Bash(pkill -f \"next-serve[r]\")",
-      "Bash(awk '{print $5, $9}')"
+      "Bash(awk '{print $5, $9}')",
+      "Bash(git -C /home/aseel332/projects/trainedright status --short)"
     ],
     "additionalDirectories": [
       "/home/aseel332/projects/trainedright/app/[slug]"
