@@ -3,9 +3,12 @@ import {
   AdminDashboardClient,
   type AdminTrainerRow,
 } from "@/components/admin-dashboard-client";
+import type { AdminHomeEditorProps } from "@/components/admin-home-editor";
 import { AdminLoginClient } from "@/components/admin-login-client";
 import { adminIsConfigured, hasAdminSession } from "@/lib/server/admin-auth";
+import { getHomeContent, getHomeSettings } from "@/lib/server/home-content";
 import { createAdminSupabaseClient } from "@/lib/server/supabase-admin";
+import { primaryCategoryLabel } from "@/lib/seo-pages";
 import { parseProfileDraft } from "@/lib/trainer-profile";
 
 export const metadata: Metadata = {
@@ -20,6 +23,59 @@ const SERVICE_KEY_MISSING =
 const MIGRATION_MISSING =
   "Run the migration supabase/migrations/20260715000000_trainer_publishing.sql in the Supabase SQL editor. Until it is applied, the public `trainers` table has no link back to trainer accounts, so approving someone cannot put them on the site.";
 
+/** Shorten a quote to something that fits one line in the picker list. */
+function snippet(value: string, max = 76) {
+  const clean = value.replace(/\s+/g, " ").trim();
+  return clean.length > max ? `${clean.slice(0, max).trimEnd()}…` : clean;
+}
+
+/**
+ * Options for the landing page editor's pin lists, built from the same
+ * assembled content the public page renders — so what the admin can pin is
+ * exactly what the page is able to show.
+ */
+async function loadHomeEditorProps(): Promise<AdminHomeEditorProps> {
+  const [content, { available }] = await Promise.all([
+    getHomeContent(),
+    getHomeSettings(),
+  ]);
+
+  return {
+    initialSettings: content.settings,
+    settingsAvailable: available,
+    trainers: content.featuredTrainers.map((trainer) => ({
+      id: trainer.slug,
+      title: trainer.name,
+      subtitle: [
+        primaryCategoryLabel(trainer.categories),
+        trainer.city,
+        trainer.reviewCount > 0
+          ? `${trainer.rating.toFixed(1)}★ from ${trainer.reviewCount} ${
+              trainer.reviewCount === 1 ? "review" : "reviews"
+            }`
+          : "no reviews yet",
+      ].join(" · "),
+    })),
+    reviews: content.reviews.map((review) => ({
+      id: review.id,
+      title: `${review.clientName} on ${review.trainerName}`,
+      subtitle: `${review.rating.toFixed(1)}★ ${
+        review.isVerified ? "· verified " : ""
+      }· ${snippet(review.reviewText)}`,
+    })),
+    transformations: content.transformations.map((item) => ({
+      id: item.id,
+      title: `${item.clientName} — ${item.resultLabel}`,
+      subtitle: `${item.durationLabel} · with ${item.trainerName}`,
+    })),
+    stories: content.stories.map((story) => ({
+      id: story.id,
+      title: story.title,
+      subtitle: `${story.authorName}${story.isFeatured ? " · featured" : ""}`,
+    })),
+  };
+}
+
 export default async function AdminPage() {
   if (!(await hasAdminSession())) {
     return <AdminLoginClient configured={adminIsConfigured()} />;
@@ -28,17 +84,25 @@ export default async function AdminPage() {
   const supabase = createAdminSupabaseClient();
 
   if (!supabase) {
-    return <AdminDashboardClient trainers={[]} loadError={SERVICE_KEY_MISSING} />;
+    return (
+      <AdminDashboardClient
+        trainers={[]}
+        loadError={SERVICE_KEY_MISSING}
+        home={null}
+      />
+    );
   }
 
-  const [accountsResult, usersResult, publishedResult] = await Promise.all([
-    supabase
-      .from("trainer_accounts")
-      .select("*")
-      .order("created_at", { ascending: false }),
-    supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-    supabase.from("trainers").select("user_id, slug, is_active"),
-  ]);
+  const [accountsResult, usersResult, publishedResult, home] =
+    await Promise.all([
+      supabase
+        .from("trainer_accounts")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+      supabase.from("trainers").select("user_id, slug, is_active"),
+      loadHomeEditorProps(),
+    ]);
 
   // The publishing migration adds trainers.user_id; without it there is no way
   // to tell which public row belongs to which account.
@@ -96,6 +160,7 @@ export default async function AdminPage() {
         accountsResult.error?.message ??
         (migrationApplied ? null : MIGRATION_MISSING)
       }
+      home={home}
     />
   );
 }

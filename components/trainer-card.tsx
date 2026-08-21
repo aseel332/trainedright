@@ -50,24 +50,42 @@ export function TrainerCard({
               {trainer.state ? `${trainer.city}, ${trainer.state}` : trainer.city}
             </p>
           </div>
-          <span className="inline-flex flex-none items-center gap-1 text-[12px] font-extrabold md:text-sm">
-            <Star
-              aria-hidden="true"
-              size={14}
-              className="fill-brand text-brand"
-            />
-            {trainer.rating.toFixed(1)}
-          </span>
+          {/* A coach with no reviews yet reads as "0.0 ★" if we print the raw
+              number — worse than saying nothing. Show that they are new
+              instead, which is true and does not look like a bad score. */}
+          {trainer.rating > 0 ? (
+            <span className="inline-flex flex-none items-center gap-1 text-[12px] font-extrabold md:text-sm">
+              <Star
+                aria-hidden="true"
+                size={14}
+                className="fill-brand text-brand"
+              />
+              {trainer.rating.toFixed(1)}
+            </span>
+          ) : (
+            <span className="inline-flex flex-none items-center rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.08em] text-muted">
+              New
+            </span>
+          )}
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] font-semibold text-muted md:text-xs">
-          <span>{trainer.reviewCount} reviews</span>
-          <span className="h-1 w-1 rounded-full bg-white/25" />
+          {trainer.reviewCount > 0 ? (
+            <>
+              <span>
+                {trainer.reviewCount}{" "}
+                {trainer.reviewCount === 1 ? "review" : "reviews"}
+              </span>
+              <span className="h-1 w-1 rounded-full bg-white/25" />
+            </>
+          ) : null}
           <span className="inline-flex items-center gap-1">
             <BriefcaseBusiness aria-hidden="true" size={12} />
             {trainer.yearsExperience} yrs exp
           </span>
-          {showPrice ? (
+          {/* 0 means the coach never set a starting price, not that they work
+              for nothing — say nothing rather than "₹0/session". */}
+          {showPrice && trainer.priceFromInr > 0 ? (
             <>
               <span className="h-1 w-1 rounded-full bg-white/25" />
               <span>{formatPriceInr(trainer.priceFromInr)}/session</span>

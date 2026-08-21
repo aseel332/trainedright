@@ -50,7 +50,21 @@
       "Bash(curl -s -o /dev/null -w \"review token \\(bad\\): %{http_code}\\\\n\" http://localhost:3000/review/not-a-token)",
       "Bash(pkill -f next-server)",
       "Bash(pkill -f \"npm run start\")",
-      "Bash(echo \"---eslint done \\(exit $?\\)---\")"
+      "Bash(echo \"---eslint done \\(exit $?\\)---\")",
+      "Bash(cat lib/client/supabase-browser.ts; echo \"=== app/[slug]/page.tsx ===\"; cat app/[slug]/page.tsx; echo \"=== profession-page head ===\"; sed -n '60,120p' app/[slug]/profession-page.tsx)",
+      "Bash(sed -n '90,160p' app/[slug]/city-page.tsx)",
+      "Bash(echo \"TSC_EXIT=$?\")",
+      "Bash(npx next *)",
+      "Bash(npx --yes playwright@1.55 --version)",
+      "Bash(npm i *)",
+      "Bash(node shot.mjs)",
+      "Bash(node admin.mjs)",
+      "Bash(node /home/aseel332/projects/trainedright/probe2-tmp.mjs)",
+      "Bash(node mobile.mjs)",
+      "Bash(pkill -f \"next-serve[r]\")"
+    ],
+    "additionalDirectories": [
+      "/home/aseel332/projects/trainedright/app/[slug]"
     ]
   }
 }

@@ -2,67 +2,74 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ChevronDown, MapPin, Trophy } from "lucide-react";
-import {
-  SPORT_CATEGORY_ID,
-  cityOptions,
-  searchCategories,
-} from "@/lib/search-categories";
-import { citySlugOf, isCityLaunched } from "@/lib/seo-pages";
+import { ArrowRight, ChevronDown, MapPin, Target } from "lucide-react";
 
-export function HomeHeroSearch() {
+export type SearchCityOption = {
+  name: string;
+  slug: string;
+  /** Published coaches in this city right now. */
+  count: number;
+};
+
+export type SearchGoalOption = {
+  id: string;
+  label: string;
+  count: number;
+};
+
+/**
+ * The home search. Two decisions only — where, and what for — because both map
+ * straight onto a city hub URL the listing already understands.
+ *
+ * Every option is built from live data, so the dropdown can never offer a city
+ * or a goal with nothing behind it.
+ */
+export function HomeHeroSearch({
+  cities,
+  goals,
+  defaultCity = "",
+}: {
+  cities: SearchCityOption[];
+  goals: SearchGoalOption[];
+  /** Pre-selected city. Set when there is only one live city worth defaulting to. */
+  defaultCity?: string;
+}) {
   const router = useRouter();
-  const [city, setCity] = useState("");
-  const [categories, setCategories] = useState<string[]>([]);
+  const [citySlug, setCitySlug] = useState(defaultCity);
+  const [goal, setGoal] = useState("");
 
-  function toggleCategory(id: string) {
-    setCategories((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
-    );
-  }
-
-  // Every search lands on the chosen city's own page; the category selection
-  // rides along as ?cat= and seeds the filters there.
   function findCoaches() {
-    if (!city) {
+    if (!citySlug) {
       return;
     }
-    const suffix =
-      categories.length > 0 ? `?cat=${categories.join(",")}` : "";
-    router.push(`/${citySlugOf(city)}${suffix}`);
+
+    router.push(goal ? `/${citySlug}?cat=${goal}` : `/${citySlug}`);
   }
 
+  const fieldClass =
+    "relative flex min-h-[56px] flex-1 items-center rounded-[14px] border border-white/10 bg-black/40 transition focus-within:border-brand/70 focus-within:bg-black/60";
+  const selectClass =
+    "h-full w-full appearance-none bg-transparent py-4 pl-11 pr-10 text-[16px] font-bold outline-none [&>option]:bg-[#141417] [&>option]:text-white";
+
   return (
-    <div className="rounded-[22px] border border-white/10 bg-panel/90 p-4 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-5">
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <label className="relative flex h-14 flex-1 items-center rounded-[15px] border border-white/10 bg-black/35 transition focus-within:border-brand/60">
+    <div className="rounded-[20px] border border-white/10 bg-panel/80 p-3 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.9)] backdrop-blur-xl sm:p-4">
+      <div className="flex flex-col gap-2.5 md:flex-row">
+        <label className={fieldClass}>
+          <span className="sr-only">Your city</span>
           <MapPin
             aria-hidden="true"
             size={18}
-            className="absolute left-4 text-brand-light"
+            className="pointer-events-none absolute left-4 text-brand-light"
           />
           <select
-            value={city}
-            onChange={(event) => setCity(event.target.value)}
-            aria-label="Your city"
-            className={`h-full w-full appearance-none bg-transparent pl-11 pr-10 text-[15px] font-bold outline-none [&>option]:bg-[#141417] ${
-              city ? "text-white" : "text-muted"
-            }`}
+            value={citySlug}
+            onChange={(event) => setCitySlug(event.target.value)}
+            className={`${selectClass} ${citySlug ? "text-white" : "text-muted"}`}
           >
-            <option value="" disabled>
-              Select your city
-            </option>
-            {cityOptions.map((option) => (
-              <option
-                key={option.name}
-                value={option.name}
-                disabled={!isCityLaunched(option.name)}
-              >
-                {isCityLaunched(option.name)
-                  ? option.name
-                  : `${option.name} — coming soon`}
+            <option value="">Select your city</option>
+            {cities.map((city) => (
+              <option key={city.slug} value={city.slug}>
+                {city.name} · {city.count} {city.count === 1 ? "coach" : "coaches"}
               </option>
             ))}
           </select>
@@ -73,44 +80,44 @@ export function HomeHeroSearch() {
           />
         </label>
 
+        {goals.length > 0 ? (
+          <label className={fieldClass}>
+            <span className="sr-only">What you want to train for</span>
+            <Target
+              aria-hidden="true"
+              size={18}
+              className="pointer-events-none absolute left-4 text-brand-light"
+            />
+            <select
+              value={goal}
+              onChange={(event) => setGoal(event.target.value)}
+              className={`${selectClass} ${goal ? "text-white" : "text-muted"}`}
+            >
+              <option value="">Any kind of coach</option>
+              {goals.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label} · {option.count}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              aria-hidden="true"
+              size={16}
+              className="pointer-events-none absolute right-4 text-muted"
+            />
+          </label>
+        ) : null}
+
         <button
           type="button"
           onClick={findCoaches}
-          disabled={!city}
-          className="inline-flex h-14 items-center justify-center gap-2 rounded-[15px] bg-brand px-7 text-sm font-extrabold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-muted disabled:hover:bg-white/10"
+          disabled={!citySlug}
+          className="inline-flex min-h-[56px] flex-none items-center justify-center gap-2 rounded-[14px] bg-brand px-7 text-[15px] font-extrabold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-white/[0.08] disabled:text-muted"
         >
           Find coaches
           <ArrowRight aria-hidden="true" size={17} />
         </button>
       </div>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        {searchCategories.map((item) => {
-          const active = categories.includes(item.id);
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => toggleCategory(item.id)}
-              aria-pressed={active}
-              className={`rounded-full border px-3.5 py-2 text-[12px] font-extrabold transition ${
-                active
-                  ? "border-brand bg-brand text-white"
-                  : "border-white/10 bg-black/30 text-soft hover:border-brand/40 hover:text-white"
-              }`}
-            >
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {categories.includes(SPORT_CATEGORY_ID) ? (
-        <p className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-muted">
-          <Trophy aria-hidden="true" size={13} className="text-brand-light" />
-          You&apos;ll choose specific sports on your city&apos;s page.
-        </p>
-      ) : null}
     </div>
   );
 }

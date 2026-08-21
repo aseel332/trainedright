@@ -375,6 +375,65 @@ export async function getTrainers(options: TrainerQuery = {}) {
   return filterAndSortTrainers(await listActiveTrainers(), options);
 }
 
+/**
+ * Client reviews across the whole marketplace, verified ones first, then
+ * highest rated, then newest. RLS already limits this to active trainers, so
+ * an unpublished coach's reviews can never surface here.
+ *
+ * Used by the landing page to quote real clients. Deduped per render pass.
+ */
+export const listActiveReviews = cache(async (): Promise<TrainerReview[]> => {
+  const supabase = createPublicServerClient();
+
+  if (!supabase) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("trainer_reviews")
+    .select("*")
+    .order("is_verified", { ascending: false })
+    .order("rating", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(60);
+
+  if (error || !data) {
+    return [];
+  }
+
+  return (data as ReviewRow[]).map(mapReview);
+});
+
+/**
+ * Client transformations across the whole marketplace, newest first. Only
+ * confirmed ones — an unconfirmed submission is still the client's to approve,
+ * so it never leaves the trainer's own dashboard.
+ *
+ * Used by the landing page for before/after proof. Deduped per render pass.
+ */
+export const listActiveTransformations = cache(
+  async (): Promise<Transformation[]> => {
+    const supabase = createPublicServerClient();
+
+    if (!supabase) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from("trainer_transformations")
+      .select("*")
+      .eq("is_confirmed", true)
+      .order("created_at", { ascending: false })
+      .limit(24);
+
+    if (error || !data) {
+      return [];
+    }
+
+    return (data as TransformationRow[]).map(mapTransformation);
+  },
+);
+
 export async function getFeaturedStories() {
   const supabase = createPublicServerClient();
 

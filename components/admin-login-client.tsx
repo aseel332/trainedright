@@ -2,7 +2,8 @@
 
 import { useActionState } from "react";
 import { Loader2, Lock, Mail, ShieldCheck } from "lucide-react";
-import { adminSignIn, type AdminActionResult } from "@/app/admin/actions";
+import { adminSignIn } from "@/app/admin/actions";
+import type { AdminActionResult } from "@/lib/admin-action-result";
 
 export function AdminLoginClient({ configured }: { configured: boolean }) {
   const [state, formAction, pending] = useActionState<

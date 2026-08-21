@@ -7,6 +7,7 @@ import {
   BadgeCheck,
   ChevronDown,
   Globe,
+  LayoutTemplate,
   Loader2,
   Lock,
   MapPin,
@@ -24,6 +25,10 @@ import {
   setTrainerApproval,
   type AdminApprovalStatus,
 } from "@/app/admin/actions";
+import {
+  AdminHomeEditor,
+  type AdminHomeEditorProps,
+} from "@/components/admin-home-editor";
 import { trainerGenderLabel } from "@/lib/trainer-profile";
 
 export type AdminTrainerRow = {
@@ -53,6 +58,11 @@ export type AdminTrainerRow = {
   credentialCount: number;
   galleryCount: number;
 };
+
+const TABS = [
+  { id: "trainers" as const, label: "Trainer accounts", icon: Users },
+  { id: "home" as const, label: "Landing page", icon: LayoutTemplate },
+];
 
 type StatusFilter = "all" | "review" | "approved" | "rejected" | "draft";
 
@@ -426,13 +436,19 @@ function TrainerCard({
   );
 }
 
+type AdminTab = "trainers" | "home";
+
 export function AdminDashboardClient({
   trainers,
   loadError,
+  home,
 }: {
   trainers: AdminTrainerRow[];
   loadError: string | null;
+  /** null only when the service-role key is missing and nothing could load. */
+  home: AdminHomeEditorProps | null;
 }) {
+  const [tab, setTab] = useState<AdminTab>("trainers");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
@@ -506,78 +522,132 @@ export function AdminDashboardClient({
       </header>
 
       <div className="mx-auto w-full max-w-[1080px] px-5">
-        <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
-          <div>
+        <div
+          role="tablist"
+          aria-label="Admin sections"
+          className="mt-6 flex gap-1 rounded-full border border-white/10 bg-panel p-1"
+        >
+          {TABS.map((item) => {
+            const Icon = item.icon;
+            const active = tab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTab(item.id)}
+                className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full px-4 text-[13px] font-extrabold transition ${
+                  active
+                    ? "bg-brand text-white"
+                    : "text-muted hover:text-white"
+                }`}
+              >
+                <Icon aria-hidden="true" size={15} />
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {tab === "trainers" ? (
+          <>
+            <div className="mt-7 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h1 className="font-display text-[30px] font-black leading-none">
+                  Trainer accounts
+                </h1>
+                <p className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-muted">
+                  <Users aria-hidden="true" size={15} />
+                  {trainers.length} total · {counts.review} waiting for review
+                </p>
+              </div>
+
+              <label className="relative block w-full max-w-[320px]">
+                <Search
+                  aria-hidden="true"
+                  size={16}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-muted"
+                />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  className="h-11 w-full rounded-[12px] border border-white/10 bg-panel pl-10 pr-4 text-[14px] font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand"
+                  placeholder="Search name, email, city"
+                />
+              </label>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              {STATUS_FILTERS.map((filter) => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => setStatusFilter(filter.id)}
+                  className={`h-9 rounded-full px-4 text-[12px] font-extrabold transition ${
+                    statusFilter === filter.id
+                      ? "bg-brand text-white"
+                      : "border border-white/10 text-muted hover:text-white"
+                  }`}
+                >
+                  {filter.label} · {counts[filter.id]}
+                </button>
+              ))}
+            </div>
+
+            {loadError ? (
+              <p className="mt-6 rounded-[12px] border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-[13px] font-semibold leading-5 text-amber-200">
+                {loadError}
+              </p>
+            ) : null}
+
+            {actionError ? (
+              <p className="mt-6 rounded-[12px] border border-brand/25 bg-brand/10 px-4 py-3 text-[13px] font-semibold leading-5 text-soft">
+                {actionError}
+              </p>
+            ) : null}
+
+            <div className="mt-6 space-y-4">
+              {visible.map((trainer) => (
+                <TrainerCard
+                  key={trainer.userId}
+                  trainer={trainer}
+                  onError={setActionError}
+                />
+              ))}
+
+              {visible.length === 0 && !loadError ? (
+                <p className="rounded-[18px] border border-dashed border-white/15 px-6 py-14 text-center text-sm font-semibold text-muted">
+                  {trainers.length === 0
+                    ? "No trainer accounts yet."
+                    : "No trainers match this filter."}
+                </p>
+              ) : null}
+            </div>
+          </>
+        ) : (
+          <div className="mt-7">
             <h1 className="font-display text-[30px] font-black leading-none">
-              Trainer accounts
+              Landing page
             </h1>
-            <p className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-muted">
-              <Users aria-hidden="true" size={15} />
-              {trainers.length} total · {counts.review} waiting for review
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-muted">
+              The home page builds itself from published coaches and the proof
+              their clients submitted. What you set here is the wording around
+              it, what leads, and what is switched on.
             </p>
+
+            {home ? (
+              <div className="mt-6">
+                <AdminHomeEditor {...home} />
+              </div>
+            ) : (
+              <p className="mt-6 rounded-[18px] border border-dashed border-white/15 px-6 py-14 text-center text-sm font-semibold text-muted">
+                Landing page settings need the service-role key. Add
+                SUPABASE_SERVICE_ROLE_KEY to .env.local and reload.
+              </p>
+            )}
           </div>
-
-          <label className="relative block w-full max-w-[320px]">
-            <Search
-              aria-hidden="true"
-              size={16}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-muted"
-            />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              className="h-11 w-full rounded-[12px] border border-white/10 bg-panel pl-10 pr-4 text-[14px] font-semibold text-white outline-none transition placeholder:text-muted focus:border-brand"
-              placeholder="Search name, email, city"
-            />
-          </label>
-        </div>
-
-        <div className="mt-5 flex flex-wrap gap-2">
-          {STATUS_FILTERS.map((filter) => (
-            <button
-              key={filter.id}
-              type="button"
-              onClick={() => setStatusFilter(filter.id)}
-              className={`h-9 rounded-full px-4 text-[12px] font-extrabold transition ${
-                statusFilter === filter.id
-                  ? "bg-brand text-white"
-                  : "border border-white/10 text-muted hover:text-white"
-              }`}
-            >
-              {filter.label} · {counts[filter.id]}
-            </button>
-          ))}
-        </div>
-
-        {loadError ? (
-          <p className="mt-6 rounded-[12px] border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-[13px] font-semibold leading-5 text-amber-200">
-            {loadError}
-          </p>
-        ) : null}
-
-        {actionError ? (
-          <p className="mt-6 rounded-[12px] border border-brand/25 bg-brand/10 px-4 py-3 text-[13px] font-semibold leading-5 text-soft">
-            {actionError}
-          </p>
-        ) : null}
-
-        <div className="mt-6 space-y-4">
-          {visible.map((trainer) => (
-            <TrainerCard
-              key={trainer.userId}
-              trainer={trainer}
-              onError={setActionError}
-            />
-          ))}
-
-          {visible.length === 0 && !loadError ? (
-            <p className="rounded-[18px] border border-dashed border-white/15 px-6 py-14 text-center text-sm font-semibold text-muted">
-              {trainers.length === 0
-                ? "No trainer accounts yet."
-                : "No trainers match this filter."}
-            </p>
-          ) : null}
-        </div>
+        )}
       </div>
     </main>
   );

@@ -19,6 +19,12 @@
   --font-display: var(--font-archivo);
 }
 
+/* The site header is sticky, so an in-page anchor would otherwise land its
+   target underneath it. */
+html {
+  scroll-padding-top: 84px;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -28,6 +34,55 @@ body {
 button,
 input {
   font: inherit;
+}
+
+/* iOS Safari zooms the whole page when a focused field's text is under 16px.
+   Design sizes stay as authored from `md` up; below that every editable
+   control gets the minimum that keeps the viewport still. The `:not()` chain
+   also lifts this above Tailwind's single-class specificity, so a `text-[13px]`
+   utility on the same element does not undo it. Range, checkbox, radio and
+   colour inputs render no text, so they keep their own sizing. */
+@media (max-width: 767px) {
+  input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Controls are finger targets first. Anything that collapses to a bare line of
+   text on a phone — a select with no explicit height, an input whose padding
+   came from a desktop-only utility — gets a floor here instead. */
+@media (max-width: 767px) {
+  input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]),
+  select,
+  textarea {
+    min-height: 44px;
+  }
+}
+
+/* Hero ground: a cool overhead light and a faint grid, no colour wash. The
+   headline sits on near-flat background so the only saturated thing above the
+   fold is the call to action. */
+.hero-surface {
+  background:
+    radial-gradient(
+      130% 90% at 50% -30%,
+      rgba(255, 255, 255, 0.07),
+      transparent 62%
+    ),
+    linear-gradient(180deg, #101013 0%, var(--background) 72%);
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 68px 68px;
+  /* Fade the grid out well before the section edges so it reads as texture
+     rather than as a table. */
+  mask-image: radial-gradient(85% 65% at 50% 0%, #000 0%, transparent 78%);
+  -webkit-mask-image: radial-gradient(85% 65% at 50% 0%, #000 0%, transparent 78%);
 }
 
 ::selection {
@@ -106,45 +161,6 @@ input {
 }
 
 @media (min-width: 1024px) {
-  .desktop-page-shell {
-    width: min(100% - 64px, 1280px);
-    margin-inline: auto;
-  }
-
-  .desktop-home-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 360px;
-    gap: 32px;
-    align-items: start;
-  }
-
-  .desktop-home-hero {
-    position: relative;
-    min-height: 360px;
-    display: flex;
-    align-items: flex-end;
-    overflow: hidden;
-    border-radius: 28px;
-    border: 1px solid rgba(240, 45, 40, 0.28);
-    background:
-      linear-gradient(120deg, rgba(240, 45, 40, 0.92), rgba(179, 27, 23, 0.78) 42%, rgba(20, 20, 23, 0.92)),
-      url("https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=78&w=1600") center / cover;
-    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.34);
-  }
-
-  .desktop-home-hero::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, rgba(0, 0, 0, 0.68), rgba(0, 0, 0, 0.08));
-    pointer-events: none;
-  }
-
-  .desktop-home-hero > * {
-    position: relative;
-    z-index: 1;
-  }
-
   .desktop-story-grid {
     display: grid;
     grid-template-columns: 1.15fr 0.85fr;

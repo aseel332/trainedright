@@ -8,12 +8,11 @@ import {
   adminIsConfigured,
   adminLoginLockoutSeconds,
   createAdminSessionToken,
-  hasAdminSession,
   registerAdminLoginFailure,
   resetAdminLoginFailures,
   verifyAdminCredentials,
 } from "@/lib/server/admin-auth";
-import { createAdminSupabaseClient } from "@/lib/server/supabase-admin";
+import { requireAdmin } from "@/lib/server/admin-guard";
 import {
   publishTrainerAccount,
   unpublishTrainerAccount,
@@ -23,14 +22,7 @@ import {
   deleteTrainerFolder,
 } from "@/lib/server/trainer-storage";
 
-export type AdminActionResult = {
-  ok: boolean;
-  error?: string;
-};
-
-const SESSION_EXPIRED = "Your admin session expired. Sign in again.";
-const SERVICE_NOT_CONFIGURED =
-  "SUPABASE_SERVICE_ROLE_KEY is not set, so admin actions are disabled.";
+import type { AdminActionResult } from "@/lib/admin-action-result";
 
 export async function adminSignIn(
   _previous: AdminActionResult | null,
@@ -83,19 +75,6 @@ export async function adminSignOut() {
   cookieStore.delete(ADMIN_SESSION_COOKIE);
   revalidatePath("/admin");
   redirect("/admin");
-}
-
-async function requireAdmin() {
-  if (!(await hasAdminSession())) {
-    return { error: SESSION_EXPIRED } as const;
-  }
-
-  const supabase = createAdminSupabaseClient();
-  if (!supabase) {
-    return { error: SERVICE_NOT_CONFIGURED } as const;
-  }
-
-  return { supabase } as const;
 }
 
 const APPROVAL_STATUSES = ["approved", "rejected", "review"] as const;

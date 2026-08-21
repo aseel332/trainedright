@@ -77,8 +77,35 @@ export async function updateAuthSession(request: NextRequest) {
 
   // Validates the JWT and refreshes the session when the access token has
   // expired. Do not run other logic between client creation and this call.
-  const { data, error } = await supabase.auth.getClaims();
-  const signedIn = !error && Boolean(data?.claims);
+  let signedIn = false;
+  let cookieIsCorrupt = false;
+
+  try {
+    const { data, error } = await supabase.auth.getClaims();
+    signedIn = !error && Boolean(data?.claims);
+  } catch {
+    // A truncated, hand-edited, or foreign-project auth cookie makes
+    // getClaims throw rather than return an error. Left unhandled that turns
+    // into a 500 on *every* page for that browser, with no way out but
+    // clearing site data by hand. Treat it as signed out and bin the cookie
+    // so the next request is clean.
+    cookieIsCorrupt = true;
+  }
+
+  /** The Supabase session cookies, including the `.0`/`.1` chunked halves. */
+  function authCookieNames() {
+    return request.cookies
+      .getAll()
+      .map((cookie) => cookie.name)
+      .filter((name) => /^sb-.*-auth-token(\.\d+)?$/.test(name));
+  }
+
+  function withRecovery<T extends NextResponse>(target: T) {
+    if (cookieIsCorrupt) {
+      authCookieNames().forEach((name) => target.cookies.delete(name));
+    }
+    return target;
+  }
 
   const { pathname, search } = request.nextUrl;
 
@@ -87,7 +114,7 @@ export async function updateAuthSession(request: NextRequest) {
     writtenCookies.forEach(({ name, value, options }) => {
       redirect.cookies.set(name, value, options);
     });
-    return redirect;
+    return withRecovery(redirect);
   }
 
   if (!signedIn && isProtectedPath(pathname)) {
@@ -109,5 +136,5 @@ export async function updateAuthSession(request: NextRequest) {
     return redirectWithCookies(redirectUrl);
   }
 
-  return response;
+  return withRecovery(response);
 }
