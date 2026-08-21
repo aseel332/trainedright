@@ -22,12 +22,51 @@ export type HomeSectionId =
   | "stories"
   | "trainerCta";
 
+/** How the hero's background is painted. */
+export type HeroBackground = "ambient" | "brand" | "plain";
+
+/** How much vertical room the hero takes. */
+export type HeroHeight = "natural" | "tall" | "full";
+
+export const HERO_BACKGROUNDS: { id: HeroBackground; label: string; hint: string }[] =
+  [
+    {
+      id: "ambient",
+      label: "Ambient",
+      hint: "Colour bloomed from a coach's photo, blurred past recognition.",
+    },
+    {
+      id: "brand",
+      label: "Brand",
+      hint: "Fixed brand tones. Independent of who is published.",
+    },
+    { id: "plain", label: "Plain", hint: "Grain and a soft spotlight only." },
+  ];
+
+export const HERO_HEIGHTS: { id: HeroHeight; label: string; hint: string }[] = [
+  { id: "natural", label: "Natural", hint: "Sized by its content." },
+  { id: "tall", label: "Tall", hint: "78% of the screen." },
+  { id: "full", label: "Full screen", hint: "Pushes everything below the fold." },
+];
+
 export type HomeSettings = {
   hero: {
     /** The H1. Supports the {city} token. */
     title: string;
     /** One short line under it. Supports {city}. Empty hides it. */
     subtitle: string;
+    background: HeroBackground;
+    /**
+     * Slug of the coach whose photo supplies the ambient colour. Empty means
+     * whichever coach currently leads the page — so the hero re-tints itself as
+     * the roster changes, with no one to remember to update.
+     */
+    ambientSlug: string;
+    height: HeroHeight;
+    /** The live category chips under the search. */
+    showGoalChips: boolean;
+    /** The "Listed now" coach panel (desktop only). */
+    showCoachPanel: boolean;
   };
   coaches: { headline: string; body: string };
   proof: { headline: string; body: string };
@@ -93,8 +132,13 @@ export const defaultHomeSettings: HomeSettings = {
     // Deliberately not city-scoped: this is the front door for the whole site,
     // and naming one city makes it read as a local page. The section headings
     // below carry {city}, where the scope really is one city's listing.
-    title: "Best trainers near you",
+    title: "Find The Best Trainer For You",
     subtitle: "Real client results, real prices, direct WhatsApp contact.",
+    background: "ambient",
+    ambientSlug: "",
+    height: "tall",
+    showGoalChips: true,
+    showCoachPanel: true,
   },
   coaches: {
     headline: "Coaches in {city}",
@@ -158,6 +202,15 @@ function flag(value: unknown, fallback: boolean) {
   return typeof value === "boolean" ? value : fallback;
 }
 
+/** One of a fixed set of ids, or the default when the payload has anything else. */
+function choice<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  fallback: T,
+): T {
+  return allowed.includes(value as T) ? (value as T) : fallback;
+}
+
 /**
  * Swap the {city} token for the city the marketplace actually has coaches in,
  * so a headline stays true as new cities open without anyone editing it.
@@ -181,6 +234,21 @@ export function parseHomeSettings(value: unknown): HomeSettings {
       // Every body line is optional: clearing one is how you make the page
       // shorter, and a blank string has to survive the round trip to do that.
       subtitle: optionalText(hero.subtitle, defaults.hero.subtitle),
+      background: choice(
+        hero.background,
+        HERO_BACKGROUNDS.map((item) => item.id),
+        defaults.hero.background,
+      ),
+      // An empty slug is the meaningful default ("whoever leads"), so this is
+      // optional text rather than a required field.
+      ambientSlug: optionalText(hero.ambientSlug, defaults.hero.ambientSlug),
+      height: choice(
+        hero.height,
+        HERO_HEIGHTS.map((item) => item.id),
+        defaults.hero.height,
+      ),
+      showGoalChips: flag(hero.showGoalChips, defaults.hero.showGoalChips),
+      showCoachPanel: flag(hero.showCoachPanel, defaults.hero.showCoachPanel),
     },
     coaches: {
       headline: text(coaches.headline, defaults.coaches.headline),

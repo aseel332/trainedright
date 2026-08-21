@@ -61,9 +61,8 @@ input {
   }
 }
 
-/* Hero ground: a cool overhead light, no colour wash. The headline sits on
-   near-flat background so the only saturated thing above the fold is the call
-   to action. */
+/* Hero ground: a cool overhead light over near-flat background. Everything
+   else in the hero stacks on top of this. */
 .hero-surface {
   background:
     radial-gradient(
@@ -73,6 +72,102 @@ input {
     ),
     linear-gradient(180deg, #101013 0%, var(--background) 72%);
 }
+
+/* Height presets, chosen in the admin console. `vh` first as the fallback for
+   browsers without `svh`. */
+.hero-h-tall {
+  min-height: 78vh;
+  min-height: 78svh;
+}
+
+.hero-h-full {
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+@media (min-width: 1024px) {
+  .hero-h-tall {
+    min-height: 620px;
+  }
+
+  .hero-h-full {
+    min-height: 92vh;
+    min-height: 92svh;
+  }
+}
+
+/* Film grain.
+   A flat dark hero bands visibly wherever a gradient crosses it, and reads
+   cheap. A few percent of fractal noise breaks up the ramp and gives the whole
+   section the texture of printed stock. Inline SVG, about a kilobyte, no
+   network request and nothing to load. */
+.hero-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Colour blooms.
+   Each holds a coach photo blurred so far past legibility that it is only a
+   shape of light — the page takes its colour from the real roster without
+   putting anyone's portrait behind the headline. `overflow: hidden` clips the
+   photo to the circle first; the blur then softens that edge into the page. */
+.hero-bloom {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 9999px;
+  filter: blur(70px) saturate(150%);
+  opacity: 0.4;
+}
+
+.hero-bloom--one {
+  top: -22%;
+  left: -10%;
+  width: 62%;
+  height: 82%;
+}
+
+.hero-bloom--two {
+  right: -8%;
+  bottom: -34%;
+  width: 52%;
+  height: 76%;
+}
+
+/* The tint layer, always painted. Warm on one corner, cool on the other, so
+   the composition has a temperature contrast rather than one flat wash. */
+.hero-bloom--brand {
+  background: radial-gradient(circle, #f02d28 0%, rgba(240, 45, 40, 0) 70%);
+  opacity: 0.26;
+}
+
+.hero-bloom--cool {
+  background: radial-gradient(circle, #2f5fd0 0%, rgba(47, 95, 208, 0) 70%);
+  opacity: 0.2;
+}
+
+/* The photo layer, over the tint. Pushed hard on saturation and brightness:
+   the source is usually a dim gym interior, and left alone it blooms grey. */
+.hero-bloom--photo {
+  filter: blur(70px) saturate(240%) brightness(1.25);
+  opacity: 0.32;
+}
+
+@media (min-width: 1024px) {
+  .hero-bloom {
+    filter: blur(96px) saturate(150%);
+  }
+
+  .hero-bloom--photo {
+    filter: blur(96px) saturate(240%) brightness(1.25);
+    opacity: 0.28;
+  }
+}
+
 
 ::selection {
   background: #f02d28;

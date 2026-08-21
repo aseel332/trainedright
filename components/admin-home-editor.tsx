@@ -17,9 +17,10 @@ import {
 } from "lucide-react";
 import { saveHomeSettings } from "@/app/admin/home-actions";
 import {
+  HERO_BACKGROUNDS,
+  HERO_HEIGHTS,
   HOME_SECTIONS,
   defaultHomeSettings,
-  type HomeSectionId,
   type HomeSettings,
 } from "@/lib/home-settings";
 
@@ -87,6 +88,107 @@ function Field({
         />
       )}
     </label>
+  );
+}
+
+/** A small segmented control for the hero's fixed-choice settings. */
+function Choice<T extends string>({
+  label,
+  hint,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  options: { id: T; label: string; hint: string }[];
+  value: T;
+  onChange: (next: T) => void;
+}) {
+  const active = options.find((option) => option.id === value);
+
+  return (
+    <div>
+      <p className="text-[12px] font-extrabold text-white">{label}</p>
+      {hint ? (
+        <p className="mt-1 text-[11.5px] font-medium leading-5 text-muted">
+          {hint}
+        </p>
+      ) : null}
+      <div
+        role="radiogroup"
+        aria-label={label}
+        className="mt-2 flex gap-1 rounded-[12px] border border-white/10 bg-black/30 p-1"
+      >
+        {options.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            role="radio"
+            aria-checked={option.id === value}
+            onClick={() => onChange(option.id)}
+            className={`min-h-9 flex-1 rounded-[9px] px-3 text-[12px] font-extrabold transition ${
+              option.id === value
+                ? "bg-brand text-white"
+                : "text-muted hover:text-white"
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      {active ? (
+        <p className="mt-1.5 text-[11.5px] font-medium leading-5 text-muted">
+          {active.hint}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** An on/off row for a single boolean setting. */
+function Toggle({
+  label,
+  hint,
+  on,
+  onToggle,
+}: {
+  label: string;
+  hint: string;
+  on: boolean;
+  onToggle: (next: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => onToggle(!on)}
+      className={`flex w-full items-center gap-3 rounded-[12px] border px-3.5 py-3 text-left transition ${
+        on
+          ? "border-emerald-400/30 bg-emerald-500/[0.08]"
+          : "border-white/10 bg-black/25"
+      }`}
+    >
+      <span
+        aria-hidden="true"
+        className={`grid h-6 w-6 flex-none place-items-center rounded-full transition ${
+          on
+            ? "bg-emerald-400 text-black"
+            : "border border-white/20 text-transparent"
+        }`}
+      >
+        <Check size={14} />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[13px] font-extrabold text-white">
+          {label}
+        </span>
+        <span className="block text-[11.5px] font-medium text-muted">
+          {hint}
+        </span>
+      </span>
+    </button>
   );
 }
 
@@ -262,51 +364,6 @@ function FeaturePicker({
   );
 }
 
-function SectionToggle({
-  id,
-  label,
-  hint,
-  on,
-  onToggle,
-}: {
-  id: HomeSectionId;
-  label: string;
-  hint: string;
-  on: boolean;
-  onToggle: (id: HomeSectionId, next: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      onClick={() => onToggle(id, !on)}
-      className={`flex w-full items-center gap-3 rounded-[14px] border px-3.5 py-3 text-left transition ${
-        on
-          ? "border-emerald-400/30 bg-emerald-500/[0.08]"
-          : "border-white/10 bg-black/25"
-      }`}
-    >
-      <span
-        aria-hidden="true"
-        className={`grid h-6 w-6 flex-none place-items-center rounded-full transition ${
-          on ? "bg-emerald-400 text-black" : "border border-white/20 text-transparent"
-        }`}
-      >
-        <Check size={14} />
-      </span>
-      <span className="min-w-0">
-        <span className="block text-[13px] font-extrabold text-white">
-          {label}
-        </span>
-        <span className="block text-[11.5px] font-medium text-muted">
-          {hint}
-        </span>
-      </span>
-    </button>
-  );
-}
-
 export function AdminHomeEditor({
   initialSettings,
   settingsAvailable,
@@ -379,6 +436,71 @@ export function AdminHomeEditor({
               patch({ hero: { ...settings.hero, subtitle } })
             }
           />
+
+          <Choice
+            label="Background"
+            options={HERO_BACKGROUNDS}
+            value={settings.hero.background}
+            onChange={(background) =>
+              patch({ hero: { ...settings.hero, background } })
+            }
+          />
+
+          {settings.hero.background === "ambient" ? (
+            <label className="block">
+              <span className="block text-[12px] font-extrabold text-white">
+                Colour comes from
+              </span>
+              <span className="mt-1 block text-[11.5px] font-medium leading-5 text-muted">
+                Their photo is blurred past recognition and used as light — you
+                are picking a colour, not a picture.
+              </span>
+              <select
+                value={settings.hero.ambientSlug}
+                onChange={(event) =>
+                  patch({
+                    hero: { ...settings.hero, ambientSlug: event.target.value },
+                  })
+                }
+                className={`${INPUT_CLASS} mt-2 appearance-none [&>option]:bg-[#141417]`}
+              >
+                <option value="">
+                  Automatic — whoever leads the page
+                </option>
+                {trainers.map((trainer) => (
+                  <option key={trainer.id} value={trainer.id}>
+                    {trainer.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          <Choice
+            label="Height"
+            options={HERO_HEIGHTS}
+            value={settings.hero.height}
+            onChange={(height) => patch({ hero: { ...settings.hero, height } })}
+          />
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Toggle
+              label="Category chips"
+              hint="Live coach-type shortcuts under the search."
+              on={settings.hero.showGoalChips}
+              onToggle={(showGoalChips) =>
+                patch({ hero: { ...settings.hero, showGoalChips } })
+              }
+            />
+            <Toggle
+              label="Coach panel"
+              hint="The 'Listed now' list. Desktop only."
+              on={settings.hero.showCoachPanel}
+              onToggle={(showCoachPanel) =>
+                patch({ hero: { ...settings.hero, showCoachPanel } })
+              }
+            />
+          </div>
         </Group>
 
         <Group
@@ -496,14 +618,15 @@ export function AdminHomeEditor({
         >
           <div className="grid gap-2 sm:grid-cols-2">
             {HOME_SECTIONS.map((section) => (
-              <SectionToggle
+              <Toggle
                 key={section.id}
-                id={section.id}
                 label={section.label}
                 hint={section.hint}
                 on={settings.sections[section.id]}
-                onToggle={(id, next) =>
-                  patch({ sections: { ...settings.sections, [id]: next } })
+                onToggle={(next) =>
+                  patch({
+                    sections: { ...settings.sections, [section.id]: next },
+                  })
                 }
               />
             ))}

@@ -6,21 +6,79 @@ import {
   type SearchCityOption,
   type SearchGoalOption,
 } from "@/components/home-hero-search";
-import { fillCity, type HomeSettings } from "@/lib/home-settings";
+import { fillCity, type HeroHeight, type HomeSettings } from "@/lib/home-settings";
 import { isOptimizableImageUrl } from "@/lib/media-links";
 import { primaryCategoryLabel } from "@/lib/seo-pages";
 import { formatPriceInr } from "@/lib/trainer-utils";
 import type { HomeNumbers, HomeReview } from "@/lib/server/home-content";
 import type { Trainer } from "@/lib/types";
 
+/** A live category the visitor can jump straight into. */
+export type HeroGoalLink = {
+  id: string;
+  label: string;
+  count: number;
+  href: string;
+};
+
+const HEIGHT_CLASS: Record<HeroHeight, string> = {
+  natural: "",
+  tall: "hero-h-tall",
+  full: "hero-h-full",
+};
+
 /**
- * The coach stack beside the headline: real published coaches, their own
- * photos, ratings and prices.
+ * The hero's background: two colour blooms in opposite corners.
  *
- * Desktop only. On a phone the coaches section starts one scroll below, and
- * naming the same three people twice reads as padding.
+ * Brand tints go down first and always — coach photos here are mostly dark gym
+ * interiors, so on their own they bloom to a muddy grey. The tint guarantees
+ * warmth, and the page still looks finished before anyone is published.
+ *
+ * On top of those, in ambient mode, the same corners carry a real coach photo
+ * blurred far past the point of being a photo. At this radius a face is only a
+ * shape of light, so the page takes its colour from the actual roster without
+ * ever putting someone's portrait behind the type — and it re-tints itself as
+ * the roster changes.
+ *
+ * `sizes` is deliberately tiny: the browser only needs a thumbnail to blur, so
+ * this costs a few kilobytes rather than a full hero image.
  */
-function HeroCoachStack({
+function HeroAmbience({ photos }: { photos: string[] }) {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+    >
+      <div className="hero-bloom hero-bloom--one hero-bloom--brand" />
+      <div className="hero-bloom hero-bloom--two hero-bloom--cool" />
+
+      {photos.slice(0, 2).map((url, index) => (
+        <div
+          key={`${url}-${index}`}
+          className={`hero-bloom hero-bloom--photo ${
+            index === 0 ? "hero-bloom--one" : "hero-bloom--two"
+          }`}
+        >
+          <Image
+            src={url}
+            alt=""
+            fill
+            unoptimized={!isOptimizableImageUrl(url)}
+            className="object-cover"
+            sizes="320px"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The coach panel beside the copy: real published coaches, their own photos,
+ * ratings and prices. Desktop only — on a phone the coaches section starts one
+ * scroll below, and naming the same three people twice reads as padding.
+ */
+function HeroCoachPanel({
   trainers,
   review,
   totalCount,
@@ -32,7 +90,7 @@ function HeroCoachStack({
   const remaining = Math.max(0, totalCount - trainers.length);
 
   return (
-    <div className="rounded-[22px] border border-white/10 bg-[#141417]/92 p-3 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.95)] backdrop-blur-xl">
+    <div className="rounded-[22px] border border-white/10 bg-[#141417]/85 p-3 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.95)] backdrop-blur-xl">
       <p className="flex items-center gap-2 px-2 pb-3 pt-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-muted">
         <span className="relative flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/70" />
@@ -126,9 +184,37 @@ function HeroCoachStack({
 }
 
 /**
- * Live facts, as one compact wrapped line rather than a stacked list — on a
- * phone a list of four sentences is four more lines of text before the search.
+ * Live category shortcuts. They fill the copy column's lower half — which is
+ * what stops it looking stranded next to the taller coach panel — and they earn
+ * the space, since each one skips the visitor straight past the search.
  */
+function HeroGoalChips({ goals }: { goals: HeroGoalLink[] }) {
+  if (goals.length === 0) {
+    return null;
+  }
+
+  return (
+    <nav aria-label="Browse by coach type" className="mt-5">
+      <ul className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
+        {goals.map((goal) => (
+          <li key={goal.id} className="flex-none">
+            <Link
+              href={goal.href}
+              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 text-[13px] font-extrabold text-white transition hover:border-brand/45 hover:bg-brand/10"
+            >
+              {goal.label}
+              <span className="text-[11.5px] font-bold text-muted">
+                {goal.count}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+/** Live facts, as one compact wrapped line rather than a stacked list. */
 function HeroStats({ numbers }: { numbers: HomeNumbers }) {
   const stats: { icon: typeof Users; text: string }[] = [];
 
@@ -160,7 +246,7 @@ function HeroStats({ numbers }: { numbers: HomeNumbers }) {
   stats.push({ icon: ShieldCheck, text: "No booking fee" });
 
   return (
-    <dl className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 lg:mt-5">
+    <dl className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
       {stats.map((stat) => {
         const Icon = stat.icon;
         return (
@@ -186,6 +272,7 @@ export function HomeHero({
   review,
   cities,
   goals,
+  goalLinks,
   defaultCity,
 }: {
   settings: HomeSettings;
@@ -194,21 +281,47 @@ export function HomeHero({
   review: HomeReview | null;
   cities: SearchCityOption[];
   goals: SearchGoalOption[];
+  goalLinks: HeroGoalLink[];
   defaultCity: string;
 }) {
-  const stackTrainers = trainers.slice(0, 3);
-  const title = fillCity(settings.hero.title, numbers.primaryCity);
-  const subtitle = fillCity(settings.hero.subtitle, numbers.primaryCity);
+  const hero = settings.hero;
+  const title = fillCity(hero.title, numbers.primaryCity);
+  const subtitle = fillCity(hero.subtitle, numbers.primaryCity);
+  const panelTrainers = hero.showCoachPanel ? trainers.slice(0, 3) : [];
+
+  // The admin can pin which coach tints the page; otherwise it follows whoever
+  // currently leads. A second, different coach gives the two blooms distinct
+  // colour instead of one flat wash.
+  const pinned = trainers.find((trainer) => trainer.slug === hero.ambientSlug);
+  const ordered = pinned
+    ? [pinned, ...trainers.filter((trainer) => trainer.slug !== pinned.slug)]
+    : trainers;
+  const ambientSources = ordered
+    .slice(0, 2)
+    .map((trainer) => trainer.cardImageUrl)
+    .filter(Boolean);
 
   return (
-    // No artwork here by design. With nothing decorative to look at, the hero's
-    // job is to get out of the way — the padding is tuned so the first real
-    // coach card lands inside the phone viewport rather than a scroll below it.
-    <section className="hero-surface relative isolate overflow-hidden border-b border-white/8">
-      <div className="relative mx-auto w-full max-w-7xl px-4 pb-9 pt-9 sm:px-6 sm:pb-12 sm:pt-12 lg:px-8 lg:py-20">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:items-center lg:gap-14">
+    <section
+      className={`hero-surface hero-grain relative isolate flex flex-col justify-center overflow-hidden border-b border-white/8 ${
+        HEIGHT_CLASS[hero.height]
+      }`}
+    >
+      {hero.background !== "plain" ? (
+        <HeroAmbience
+          photos={hero.background === "ambient" ? ambientSources : []}
+        />
+      ) : null}
+
+      {/* Above the grain: at 5% it would otherwise lay a texture over the type
+          itself and cost the headline a little crispness. */}
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
+        {/* Top-aligned on purpose: centring a short copy column against the
+            taller coach panel is what made the headline float low and read as
+            bottom-aligned. */}
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:items-start lg:gap-14">
           <div className="min-w-0">
-            <h1 className="font-display text-[42px] font-black leading-[1.02] tracking-[-0.025em] sm:text-[58px] lg:text-[68px]">
+            <h1 className="font-display text-[34px] font-black leading-[1.06] tracking-[-0.02em] sm:text-[46px] sm:leading-[1.02] lg:text-[60px]">
               {title}
             </h1>
 
@@ -226,13 +339,15 @@ export function HomeHero({
               />
             </div>
 
+            {hero.showGoalChips ? <HeroGoalChips goals={goalLinks} /> : null}
+
             <HeroStats numbers={numbers} />
           </div>
 
-          {stackTrainers.length > 0 ? (
+          {panelTrainers.length > 0 ? (
             <div className="hidden min-w-0 lg:block">
-              <HeroCoachStack
-                trainers={stackTrainers}
+              <HeroCoachPanel
+                trainers={panelTrainers}
                 review={review}
                 totalCount={numbers.coachCount}
               />

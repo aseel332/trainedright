@@ -63,7 +63,10 @@
       "Bash(node mobile.mjs)",
       "Bash(pkill -f \"next-serve[r]\")",
       "Bash(awk '{print $5, $9}')",
-      "Bash(git -C /home/aseel332/projects/trainedright status --short)"
+      "Bash(git -C /home/aseel332/projects/trainedright status --short)",
+      "Bash(node measure.mjs)",
+      "Bash(git -C /home/aseel332/projects/trainedright diff --stat)",
+      "Bash(git -C /home/aseel332/projects/trainedright log --oneline -3)"
     ],
     "additionalDirectories": [
       "/home/aseel332/projects/trainedright/app/[slug]"

@@ -95,6 +95,13 @@ export default async function Home() {
             label: category.label,
             count,
           }))}
+          goalLinks={goals.map(({ category, count, href }) => ({
+            id: category.id,
+            // Short labels here: these are chips in a row, not dropdown rows.
+            label: category.shortLabel,
+            count,
+            href,
+          }))}
           defaultCity={defaultCity}
         />
 
