@@ -74,15 +74,25 @@ input {
     linear-gradient(180deg, #101013 0%, var(--background) 72%);
 }
 
-.hero-grid {
-  background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 68px 68px;
-  /* Fade the grid out well before the section edges so it reads as texture
-     rather than as a table. */
-  mask-image: radial-gradient(85% 65% at 50% 0%, #000 0%, transparent 78%);
-  -webkit-mask-image: radial-gradient(85% 65% at 50% 0%, #000 0%, transparent 78%);
+/* The coaches' own photos as hero texture. Desaturated and faded to roughly a
+   fifth so it registers as depth, not as a gallery — at full colour a wall of
+   faces fights the headline and reads as a stock collage. The mask lets the
+   mosaic dissolve into the page instead of ending on a hard edge. */
+.hero-collage {
+  opacity: 0.24;
+  filter: grayscale(1) contrast(1.05);
+  mask-image: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.5) 38%,
+    transparent 82%
+  );
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.5) 38%,
+    transparent 82%
+  );
 }
 
 ::selection {

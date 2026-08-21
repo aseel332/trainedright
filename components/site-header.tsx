@@ -239,8 +239,8 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/8 bg-background/85 backdrop-blur-xl">
-      <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3 sm:px-6 sm:py-3.5 lg:px-8">
-        <BrandLogo compact tagline={false} />
+      <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8">
+        <BrandLogo compact />
 
         <nav
           aria-label="Main"

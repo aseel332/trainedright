@@ -24,19 +24,14 @@ export type HomeSectionId =
 
 export type HomeSettings = {
   hero: {
-    /** Small chip above the headline. Empty hides the chip. */
-    eyebrow: string;
-    /** First line of the H1, rendered in white. */
-    titleLead: string;
-    /** Second line of the H1, rendered in the accent colour. */
-    titleAccent: string;
-    /** Sentence under the headline. */
+    /** The H1. Supports the {city} token. */
+    title: string;
+    /** One short line under it. Supports {city}. Empty hides it. */
     subtitle: string;
   };
   coaches: { headline: string; body: string };
   proof: { headline: string; body: string };
   trainerCta: {
-    eyebrow: string;
     headline: string;
     body: string;
     primaryLabel: string;
@@ -86,30 +81,29 @@ export const HOME_SECTIONS: { id: HomeSectionId; label: string; hint: string }[]
 export const HOME_SETTINGS_ID = "home";
 
 /**
- * Defaults are written against what TrainedRight actually is — a small,
- * Ahmedabad-first marketplace where every coach is reviewed by a human and
- * every review comes from a real client — rather than generic fitness copy.
+ * Copy defaults.
+ *
+ * Kept deliberately short: the page's job is to show real coaches and real
+ * client proof, and every extra sentence pushes those further down a phone
+ * screen. Headings are plain statements of what the block is — the images and
+ * the numbers do the persuading.
  */
 export const defaultHomeSettings: HomeSettings = {
   hero: {
-    eyebrow: "Checked before they go live",
-    titleLead: "Don't gamble on",
-    titleAccent: "your trainer.",
-    subtitle:
-      "See who actually coaches near you — their real clients, real results and real prices — then message them directly on WhatsApp. No fees, no middlemen, no ads dressed up as recommendations.",
+    title: "Best trainers in {city}",
+    subtitle: "Real client results, real prices, direct WhatsApp contact.",
   },
   coaches: {
-    headline: "The coaches, not a shortlist we were paid for.",
-    body: "Every profile here belongs to a working coach who was verified before going live. Nobody pays to rank.",
+    headline: "Coaches in {city}",
+    body: "Verified before they go live. Nobody pays to rank.",
   },
   proof: {
-    headline: "Proof you can check.",
-    body: "Transformations and reviews are submitted by the client themselves through a private link — the coach never types them.",
+    headline: "Real client results",
+    body: "Submitted by the client, not the coach.",
   },
   trainerCta: {
-    eyebrow: "For coaches",
-    headline: "Your next client is already searching your city.",
-    body: "Build a profile that does the selling, collect reviews and transformations your clients submit themselves, and see exactly who found you. You keep the client and 100% of what you charge.",
+    headline: "Get found by clients near you",
+    body: "Free listing, 0% commission, and proof your clients submit themselves.",
     primaryLabel: "List your coaching",
   },
   featuredTrainerSlugs: [],
@@ -161,6 +155,14 @@ function flag(value: unknown, fallback: boolean) {
   return typeof value === "boolean" ? value : fallback;
 }
 
+/**
+ * Swap the {city} token for the city the marketplace actually has coaches in,
+ * so a headline stays true as new cities open without anyone editing it.
+ */
+export function fillCity(value: string, city: string) {
+  return value.replace(/\{city\}/gi, city || "your city");
+}
+
 export function parseHomeSettings(value: unknown): HomeSettings {
   const raw = record(value);
   const hero = record(raw.hero);
@@ -172,23 +174,22 @@ export function parseHomeSettings(value: unknown): HomeSettings {
 
   return {
     hero: {
-      eyebrow: optionalText(hero.eyebrow, defaults.hero.eyebrow),
-      titleLead: text(hero.titleLead, defaults.hero.titleLead),
-      titleAccent: text(hero.titleAccent, defaults.hero.titleAccent),
-      subtitle: text(hero.subtitle, defaults.hero.subtitle),
+      title: text(hero.title, defaults.hero.title),
+      // Every body line is optional: clearing one is how you make the page
+      // shorter, and a blank string has to survive the round trip to do that.
+      subtitle: optionalText(hero.subtitle, defaults.hero.subtitle),
     },
     coaches: {
       headline: text(coaches.headline, defaults.coaches.headline),
-      body: text(coaches.body, defaults.coaches.body),
+      body: optionalText(coaches.body, defaults.coaches.body),
     },
     proof: {
       headline: text(proof.headline, defaults.proof.headline),
-      body: text(proof.body, defaults.proof.body),
+      body: optionalText(proof.body, defaults.proof.body),
     },
     trainerCta: {
-      eyebrow: text(trainerCta.eyebrow, defaults.trainerCta.eyebrow),
       headline: text(trainerCta.headline, defaults.trainerCta.headline),
-      body: text(trainerCta.body, defaults.trainerCta.body),
+      body: optionalText(trainerCta.body, defaults.trainerCta.body),
       primaryLabel: text(
         trainerCta.primaryLabel,
         defaults.trainerCta.primaryLabel,

@@ -83,7 +83,7 @@ function TransformationProof({ item }: { item: HomeTransformation }) {
         </div>
 
         {item.review ? (
-          <blockquote className="mt-3 line-clamp-4 text-[13px] leading-6 text-soft">
+          <blockquote className="mt-3 line-clamp-3 text-[13px] leading-6 text-soft">
             &ldquo;{item.review}&rdquo;
           </blockquote>
         ) : null}
@@ -124,7 +124,9 @@ function ReviewProof({ review }: { review: HomeReview }) {
         ) : null}
       </div>
 
-      <blockquote className="mt-3 flex-1 text-[13.5px] leading-6 text-soft">
+      {/* Clamped: four full reviews side by side is a wall of prose, and the
+          whole thing is one tap away on the coach's profile. */}
+      <blockquote className="mt-3 line-clamp-4 flex-1 text-[13.5px] leading-6 text-soft">
         &ldquo;{review.reviewText}&rdquo;
       </blockquote>
 
@@ -179,21 +181,20 @@ export function HomeProof({
 
   return (
     <section className="border-t border-white/8 bg-panel/25">
-      <div className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
+      <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
         <div className="max-w-2xl">
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-brand-light">
-            Client proof
-          </p>
-          <h2 className="mt-2.5 font-display text-[30px] font-black leading-[1.02] tracking-[-0.01em] md:text-[42px]">
+          <h2 className="font-display text-[28px] font-black leading-[1.05] tracking-[-0.015em] md:text-[36px]">
             {headline}
           </h2>
-          <p className="mt-3.5 text-[14px] leading-7 text-muted md:text-[15px]">
-            {body}
-          </p>
+          {body ? (
+            <p className="mt-2 text-[13.5px] leading-6 text-muted md:text-[14px]">
+              {body}
+            </p>
+          ) : null}
         </div>
 
         <div
-          className={`mt-8 grid gap-4 ${
+          className={`mt-6 grid gap-4 ${
             transformation
               ? "lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)]"
               : "lg:grid-cols-1"

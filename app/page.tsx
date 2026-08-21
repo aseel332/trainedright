@@ -9,6 +9,7 @@ import { HomeFooter } from "@/components/home/site-footer";
 import { PopularSearches } from "@/components/popular-searches";
 import { SiteHeader } from "@/components/site-header";
 import { StoryCard } from "@/components/story-card";
+import { fillCity } from "@/lib/home-settings";
 import { getHomeContent, liveCategories } from "@/lib/server/home-content";
 import { cityOptions } from "@/lib/search-categories";
 import {
@@ -99,10 +100,9 @@ export default async function Home() {
 
         {settings.sections.coaches ? (
           <HomeCoaches
-            headline={settings.coaches.headline}
-            body={settings.coaches.body}
+            headline={fillCity(settings.coaches.headline, numbers.primaryCity)}
+            body={fillCity(settings.coaches.body, numbers.primaryCity)}
             trainers={featuredTrainers.slice(0, 4)}
-            totalCount={numbers.coachCount}
             browseHref={browseHref}
             browseLabel={browseLabel}
           />
@@ -110,8 +110,8 @@ export default async function Home() {
 
         {settings.sections.proof ? (
           <HomeProof
-            headline={settings.proof.headline}
-            body={settings.proof.body}
+            headline={fillCity(settings.proof.headline, numbers.primaryCity)}
+            body={fillCity(settings.proof.body, numbers.primaryCity)}
             transformation={transformations[0] ?? null}
             reviews={reviews.slice(0, transformations[0] ? 4 : 3)}
           />
@@ -127,20 +127,15 @@ export default async function Home() {
 
         {settings.sections.stories && stories.length > 0 ? (
           <section className="border-t border-white/8">
-            <div className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
-              <div className="max-w-2xl">
-                <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-brand-light">
-                  Stories
-                </p>
-                <h2 className="mt-2.5 font-display text-[30px] font-black leading-[1.02] tracking-[-0.01em] md:text-[42px]">
-                  Longer reads from the people behind the profiles.
-                </h2>
-              </div>
+            <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+              <h2 className="font-display text-[28px] font-black leading-[1.05] tracking-[-0.015em] md:text-[36px]">
+                Stories
+              </h2>
               {/* The editorial two-column grid needs a second card to lean
                   against — with one story it leaves a hole, so a single story
                   just runs full width. */}
               <div
-                className={`scrollbar-none -mx-4 mt-7 flex gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:px-0 ${
+                className={`scrollbar-none -mx-4 mt-6 flex gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:px-0 ${
                   stories.length > 1
                     ? "desktop-story-grid md:grid-cols-2"
                     : "md:grid-cols-1"

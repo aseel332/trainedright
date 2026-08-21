@@ -6,46 +6,70 @@ import {
   type SearchCityOption,
   type SearchGoalOption,
 } from "@/components/home-hero-search";
+import { fillCity, type HomeSettings } from "@/lib/home-settings";
 import { isOptimizableImageUrl } from "@/lib/media-links";
 import { primaryCategoryLabel } from "@/lib/seo-pages";
 import { formatPriceInr } from "@/lib/trainer-utils";
 import type { HomeNumbers, HomeReview } from "@/lib/server/home-content";
-import type { HomeSettings } from "@/lib/home-settings";
 import type { Trainer } from "@/lib/types";
 
-/** A verified client quote, on its own. Used as the mobile hero proof. */
-function HeroReviewQuote({ review }: { review: HomeReview }) {
+/** Enough cards to fill the wall at every breakpoint; the rest is clipped. */
+const BACKDROP_TILES = 18;
+
+/**
+ * The hero backdrop: a wall of the coaches' own profile cards, desaturated and
+ * dropped to a whisper behind the type.
+ *
+ * Deliberately kept as separate rounded cards with gaps rather than an
+ * edge-to-edge mosaic — butted together, the joins between photos read as an
+ * accident, while a card grid reads as a decision. They keep a portrait aspect
+ * ratio for the same reason: stretched to fill the section they stop looking
+ * like profile cards at all.
+ *
+ * Same people as the listings below, so the texture is never stock decoration —
+ * but at this opacity nobody is asked to read it.
+ */
+function HeroBackdrop({ trainers }: { trainers: Trainer[] }) {
+  if (trainers.length === 0) {
+    return null;
+  }
+
+  // Repeat the roster until the wall is full: a small marketplace still gets a
+  // complete backdrop rather than a half-empty one.
+  const tiles = Array.from(
+    { length: BACKDROP_TILES },
+    (_, index) => trainers[index % trainers.length],
+  );
+
   return (
-    <figure className="rounded-[16px] border border-white/10 bg-panel/60 p-4">
-      <blockquote className="line-clamp-3 text-[13px] leading-6 text-soft">
-        &ldquo;{review.reviewText}&rdquo;
-      </blockquote>
-      <figcaption className="mt-2.5 flex items-center gap-2 text-[11.5px] font-bold text-muted">
-        {review.isVerified ? (
-          <BadgeCheck
-            aria-hidden="true"
-            size={13}
-            className="flex-none text-emerald-300"
-          />
-        ) : null}
-        <span className="truncate">
-          {review.clientName} on {review.trainerName}
-        </span>
-      </figcaption>
-    </figure>
+    <div aria-hidden="true" className="absolute inset-0 overflow-hidden">
+      <div className="hero-collage grid grid-cols-3 gap-3 p-3 sm:grid-cols-4 lg:grid-cols-6">
+        {tiles.map((trainer, index) => (
+          <div
+            key={`${trainer.id}-${index}`}
+            className="relative aspect-[3/4] overflow-hidden rounded-[14px]"
+          >
+            <Image
+              src={trainer.cardImageUrl}
+              alt=""
+              fill
+              unoptimized={!isOptimizableImageUrl(trainer.cardImageUrl)}
+              className="object-cover"
+              sizes="(min-width: 1024px) 17vw, (min-width: 640px) 25vw, 33vw"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
 /**
- * The coach stack beside the headline.
- *
- * This is the hero image: real published coaches, their own photos, their own
- * ratings and prices. A stock gym photo would say nothing about whether anyone
- * is actually on the platform — this says exactly who is.
+ * The coach stack beside the headline: real published coaches, their own
+ * photos, ratings and prices.
  *
  * Desktop only. On a phone the coaches section starts one scroll below, and
- * naming the same three people twice in a row reads as padding — so the mobile
- * hero keeps the client quote and drops the roster.
+ * naming the same three people twice reads as padding.
  */
 function HeroCoachStack({
   trainers,
@@ -59,13 +83,13 @@ function HeroCoachStack({
   const remaining = Math.max(0, totalCount - trainers.length);
 
   return (
-    <div className="rounded-[22px] border border-white/10 bg-panel/70 p-3 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.95)] backdrop-blur-xl">
+    <div className="rounded-[22px] border border-white/10 bg-[#141417]/92 p-3 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.95)] backdrop-blur-xl">
       <p className="flex items-center gap-2 px-2 pb-3 pt-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-muted">
         <span className="relative flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/70" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
         </span>
-        On the site right now
+        Listed now
       </p>
 
       <ul className="space-y-2">
@@ -73,7 +97,7 @@ function HeroCoachStack({
           <li key={trainer.id}>
             <Link
               href={`/trainers/${trainer.slug}`}
-              className="group flex items-center gap-3 rounded-[16px] border border-white/8 bg-black/30 p-2.5 transition hover:border-brand/45 hover:bg-black/50"
+              className="group flex items-center gap-3 rounded-[16px] border border-white/8 bg-black/35 p-2.5 transition hover:border-brand/45 hover:bg-black/55"
             >
               <span className="relative h-14 w-14 flex-none overflow-hidden rounded-[12px] bg-[#221215]">
                 <Image
@@ -124,8 +148,8 @@ function HeroCoachStack({
       </ul>
 
       {review ? (
-        <figure className="mt-2 rounded-[16px] border border-white/8 bg-black/20 p-3.5">
-          <blockquote className="line-clamp-3 text-[12.5px] leading-5 text-soft">
+        <figure className="mt-2 rounded-[16px] border border-white/8 bg-black/25 p-3.5">
+          <blockquote className="line-clamp-2 text-[12.5px] leading-5 text-soft">
             &ldquo;{review.reviewText}&rdquo;
           </blockquote>
           <figcaption className="mt-2.5 flex items-center gap-2 text-[11px] font-bold text-muted">
@@ -145,56 +169,60 @@ function HeroCoachStack({
 
       {remaining > 0 ? (
         <p className="px-2 pb-1 pt-3 text-[11.5px] font-bold text-muted">
-          + {remaining} more {remaining === 1 ? "coach" : "coaches"} listed
+          + {remaining} more {remaining === 1 ? "coach" : "coaches"}
         </p>
       ) : null}
     </div>
   );
 }
 
+/**
+ * Live facts, as one compact wrapped line rather than a stacked list — on a
+ * phone a list of four sentences is four more lines of text before the search.
+ */
 function HeroStats({ numbers }: { numbers: HomeNumbers }) {
   const stats: { icon: typeof Users; text: string }[] = [];
 
   if (numbers.coachCount > 0) {
-    const noun = numbers.coachCount === 1 ? "coach" : "coaches";
     stats.push({
       icon: Users,
-      // Naming the city keeps this a fact rather than a claim about quality.
-      text: numbers.primaryCity
-        ? `${numbers.coachCount} ${noun} in ${numbers.primaryCity}`
-        : `${numbers.coachCount} ${noun} listed`,
+      text: `${numbers.coachCount} ${
+        numbers.coachCount === 1 ? "coach" : "coaches"
+      }`,
     });
   }
 
   if (numbers.averageRating > 0 && numbers.reviewCount > 0) {
     stats.push({
       icon: Star,
-      text: `${numbers.averageRating.toFixed(1)} average from ${
-        numbers.reviewCount
-      } client ${numbers.reviewCount === 1 ? "review" : "reviews"}`,
+      text: `${numbers.averageRating.toFixed(1)} from ${numbers.reviewCount} ${
+        numbers.reviewCount === 1 ? "review" : "reviews"
+      }`,
     });
   }
 
   if (numbers.lowestPriceInr > 0) {
     stats.push({
       icon: IndianRupee,
-      text: `Sessions from ${formatPriceInr(numbers.lowestPriceInr)}`,
+      text: `From ${formatPriceInr(numbers.lowestPriceInr)}`,
     });
   }
 
-  // Not a metric — a standing promise, and the reason none of the above is
-  // pay-to-play. Worth stating next to the numbers it explains.
-  stats.push({ icon: ShieldCheck, text: "No booking fee, ever" });
+  stats.push({ icon: ShieldCheck, text: "No booking fee" });
 
   return (
-    <dl className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
+    <dl className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2.5">
       {stats.map((stat) => {
         const Icon = stat.icon;
         return (
-          <div key={stat.text} className="flex items-center gap-2">
-            <Icon aria-hidden="true" size={15} className="flex-none text-brand-light" />
+          <div key={stat.text} className="flex items-center gap-1.5">
+            <Icon
+              aria-hidden="true"
+              size={14}
+              className="flex-none text-brand-light"
+            />
             <dt className="sr-only">Marketplace fact</dt>
-            <dd className="text-[13px] font-bold text-soft">{stat.text}</dd>
+            <dd className="text-[12.5px] font-bold text-soft">{stat.text}</dd>
           </div>
         );
       })}
@@ -220,37 +248,34 @@ export function HomeHero({
   defaultCity: string;
 }) {
   const stackTrainers = trainers.slice(0, 3);
+  const title = fillCity(settings.hero.title, numbers.primaryCity);
+  const subtitle = fillCity(settings.hero.subtitle, numbers.primaryCity);
 
   return (
-    <section className="hero-surface relative overflow-hidden border-b border-white/8">
-      <div aria-hidden="true" className="hero-grid absolute inset-0" />
+    <section className="hero-surface relative isolate overflow-hidden border-b border-white/8">
+      <HeroBackdrop trainers={trainers} />
+      {/* Guarantees headline contrast whatever the photos behind it are. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-gradient-to-b from-background/55 via-background/80 to-background"
+      />
 
-      <div className="relative mx-auto w-full max-w-7xl px-4 pb-12 pt-10 sm:px-6 sm:pb-16 sm:pt-14 lg:px-8 lg:pb-24 lg:pt-20">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,376px)] lg:items-center lg:gap-14">
+      {/* Generous on desktop on purpose: the card wall behind needs vertical
+          room to read as a backdrop rather than a stripe along the top. */}
+      <div className="relative mx-auto w-full max-w-7xl px-4 pb-12 pt-12 sm:px-6 sm:pb-16 lg:px-8 lg:pb-20 lg:pt-24">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:items-center lg:gap-14">
           <div className="min-w-0">
-            {settings.hero.eyebrow ? (
-              <p className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-soft">
-                <BadgeCheck
-                  aria-hidden="true"
-                  size={14}
-                  className="flex-none text-emerald-300"
-                />
-                {settings.hero.eyebrow}
+            <h1 className="font-display text-[42px] font-black leading-[1.02] tracking-[-0.025em] sm:text-[58px] lg:text-[68px]">
+              {title}
+            </h1>
+
+            {subtitle ? (
+              <p className="mt-4 max-w-lg text-[15px] font-medium leading-6 text-soft md:text-[17px] md:leading-7">
+                {subtitle}
               </p>
             ) : null}
 
-            <h1 className="mt-5 font-display text-[40px] font-black leading-[0.96] tracking-[-0.02em] sm:text-[58px] lg:text-[72px]">
-              {settings.hero.titleLead}
-              <span className="block text-brand-light">
-                {settings.hero.titleAccent}
-              </span>
-            </h1>
-
-            <p className="mt-5 max-w-[38rem] text-[15px] font-medium leading-7 text-soft md:text-[17px] md:leading-8">
-              {settings.hero.subtitle}
-            </p>
-
-            <div className="mt-8 max-w-2xl">
+            <div className="mt-7 max-w-3xl">
               <HomeHeroSearch
                 cities={cities}
                 goals={goals}
@@ -259,12 +284,6 @@ export function HomeHero({
             </div>
 
             <HeroStats numbers={numbers} />
-
-            {review ? (
-              <div className="mt-6 max-w-2xl lg:hidden">
-                <HeroReviewQuote review={review} />
-              </div>
-            ) : null}
           </div>
 
           {stackTrainers.length > 0 ? (

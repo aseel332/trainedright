@@ -61,7 +61,8 @@
       "Bash(node admin.mjs)",
       "Bash(node /home/aseel332/projects/trainedright/probe2-tmp.mjs)",
       "Bash(node mobile.mjs)",
-      "Bash(pkill -f \"next-serve[r]\")"
+      "Bash(pkill -f \"next-serve[r]\")",
+      "Bash(awk '{print $5, $9}')"
     ],
     "additionalDirectories": [
       "/home/aseel332/projects/trainedright/app/[slug]"

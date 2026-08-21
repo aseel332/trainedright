@@ -361,36 +361,19 @@ export function AdminHomeEditor({
       <div className="grid gap-4 lg:grid-cols-2">
         <Group
           title="Hero"
-          description="The first screen. Facts under it — coach count, average rating, lowest price — are read live from the marketplace and are not editable here."
+          description="The first screen. The coach count, average rating and lowest price under it are read live from the marketplace and are not editable here."
         >
           <Field
-            label="Chip above the headline"
-            hint="Leave empty to hide the chip entirely."
-            value={settings.hero.eyebrow}
-            onChange={(eyebrow) =>
-              patch({ hero: { ...settings.hero, eyebrow } })
-            }
+            label="Headline"
+            hint="Write {city} to drop in the city with the most coaches."
+            value={settings.hero.title}
+            onChange={(title) => patch({ hero: { ...settings.hero, title } })}
           />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              label="Headline — first line"
-              value={settings.hero.titleLead}
-              onChange={(titleLead) =>
-                patch({ hero: { ...settings.hero, titleLead } })
-              }
-            />
-            <Field
-              label="Headline — second line"
-              hint="Rendered in the brand colour."
-              value={settings.hero.titleAccent}
-              onChange={(titleAccent) =>
-                patch({ hero: { ...settings.hero, titleAccent } })
-              }
-            />
-          </div>
           <Field
-            label="Sub-headline"
+            label="One line under it"
+            hint="Leave empty to show nothing but the headline."
             multiline
+            rows={2}
             value={settings.hero.subtitle}
             onChange={(subtitle) =>
               patch({ hero: { ...settings.hero, subtitle } })
@@ -404,13 +387,15 @@ export function AdminHomeEditor({
         >
           <Field
             label="Headline"
+            hint="{city} works here too."
             value={settings.coaches.headline}
             onChange={(headline) =>
               patch({ coaches: { ...settings.coaches, headline } })
             }
           />
           <Field
-            label="Intro line"
+            label="One line under it"
+            hint="Leave empty to drop it."
             multiline
             rows={2}
             value={settings.coaches.body}
@@ -437,7 +422,8 @@ export function AdminHomeEditor({
             }
           />
           <Field
-            label="Intro line"
+            label="One line under it"
+            hint="Leave empty to drop it."
             multiline
             rows={2}
             value={settings.proof.body}
@@ -466,13 +452,6 @@ export function AdminHomeEditor({
           description="The sign-up panel near the bottom. A trainer who is already signed in sees a link to their dashboard here instead."
         >
           <Field
-            label="Kicker"
-            value={settings.trainerCta.eyebrow}
-            onChange={(eyebrow) =>
-              patch({ trainerCta: { ...settings.trainerCta, eyebrow } })
-            }
-          />
-          <Field
             label="Headline"
             value={settings.trainerCta.headline}
             onChange={(headline) =>
@@ -480,8 +459,10 @@ export function AdminHomeEditor({
             }
           />
           <Field
-            label="Body"
+            label="One line under it"
+            hint="Leave empty to drop it."
             multiline
+            rows={2}
             value={settings.trainerCta.body}
             onChange={(body) =>
               patch({ trainerCta: { ...settings.trainerCta, body } })

@@ -67,9 +67,12 @@ export function HomeHeroSearch({
             className={`${selectClass} ${citySlug ? "text-white" : "text-muted"}`}
           >
             <option value="">Select your city</option>
+            {/* Just the number after the name: a select is a narrow box, and
+                "Ahmedabad · 5 coaches" is the first thing to get clipped. The
+                pin icon and the stat line already say what 5 counts. */}
             {cities.map((city) => (
               <option key={city.slug} value={city.slug}>
-                {city.name} · {city.count} {city.count === 1 ? "coach" : "coaches"}
+                {city.name} · {city.count}
               </option>
             ))}
           </select>

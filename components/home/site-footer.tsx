@@ -15,8 +15,8 @@ export function HomeFooter({
               TRAINED<span className="text-brand">RIGHT</span>
             </p>
             <p className="mt-3 max-w-xs text-[13px] font-medium leading-6 text-muted">
-              A directory of working fitness coaches, ranked by what their
-              clients say — not by who paid. Free to browse, free to contact.
+              Find the right coach for your story. Free to browse, free to
+              contact.
             </p>
           </div>
 

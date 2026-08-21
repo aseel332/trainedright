@@ -2,8 +2,6 @@ import Link from "next/link";
 
 export function BrandLogo({
   compact = false,
-  /** The strapline under the wordmark. Off in the site header, where the
-      nav sits on the same line and a second line of text just adds noise. */
   tagline = true,
 }: {
   compact?: boolean;
@@ -17,13 +15,21 @@ export function BrandLogo({
     >
       <span
         className={`font-display font-black text-white ${
-          compact ? "text-[22px]" : "text-[28px] md:text-[32px]"
+          compact ? "text-[21px]" : "text-[28px] md:text-[32px]"
         }`}
       >
         TRAINED<span className="text-brand">RIGHT</span>
       </span>
       {tagline ? (
-        <span className="mt-1 max-w-[220px] text-[10px] font-bold uppercase leading-[1.25] text-muted">
+        <span
+          className={`mt-1 font-bold uppercase text-muted ${
+            // In the header the strapline has to stay on one line next to the
+            // nav, so it is tighter there than on the standalone lockup.
+            compact
+              ? "whitespace-nowrap text-[8.5px] tracking-[0.055em]"
+              : "max-w-[220px] text-[10px] leading-[1.25]"
+          }`}
+        >
           Find the right coach for your story
         </span>
       ) : null}
