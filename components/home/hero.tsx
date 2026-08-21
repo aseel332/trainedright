@@ -252,17 +252,14 @@ export function HomeHero({
   const subtitle = fillCity(settings.hero.subtitle, numbers.primaryCity);
 
   return (
-    <section className="hero-surface relative isolate overflow-hidden border-b border-white/8">
+    // Copy sits at the bottom on a phone so the wall owns the top of the
+    // screen; centred from lg up, where the two-column layout balances itself.
+    <section className="hero-shell hero-surface relative isolate flex flex-col justify-end overflow-hidden border-b border-white/8 lg:justify-center">
       <HeroBackdrop trainers={trainers} />
       {/* Guarantees headline contrast whatever the photos behind it are. */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-b from-background/55 via-background/80 to-background"
-      />
+      <div aria-hidden="true" className="hero-veil absolute inset-0" />
 
-      {/* Generous on desktop on purpose: the card wall behind needs vertical
-          room to read as a backdrop rather than a stripe along the top. */}
-      <div className="relative mx-auto w-full max-w-7xl px-4 pb-12 pt-12 sm:px-6 sm:pb-16 lg:px-8 lg:pb-20 lg:pt-24">
+      <div className="relative mx-auto w-full max-w-7xl px-4 pb-12 pt-10 sm:px-6 sm:pb-14 lg:px-8 lg:py-16">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:items-center lg:gap-14">
           <div className="min-w-0">
             <h1 className="font-display text-[42px] font-black leading-[1.02] tracking-[-0.025em] sm:text-[58px] lg:text-[68px]">

@@ -90,7 +90,10 @@ export const HOME_SETTINGS_ID = "home";
  */
 export const defaultHomeSettings: HomeSettings = {
   hero: {
-    title: "Best trainers in {city}",
+    // Deliberately not city-scoped: this is the front door for the whole site,
+    // and naming one city makes it read as a local page. The section headings
+    // below carry {city}, where the scope really is one city's listing.
+    title: "Best trainers near you",
     subtitle: "Real client results, real prices, direct WhatsApp contact.",
   },
   coaches: {

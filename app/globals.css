@@ -61,9 +61,9 @@ input {
   }
 }
 
-/* Hero ground: a cool overhead light and a faint grid, no colour wash. The
-   headline sits on near-flat background so the only saturated thing above the
-   fold is the call to action. */
+/* Hero ground: a cool overhead light, no colour wash. The headline sits on
+   near-flat background so the only saturated thing above the fold is the call
+   to action. */
 .hero-surface {
   background:
     radial-gradient(
@@ -74,25 +74,84 @@ input {
     linear-gradient(180deg, #101013 0%, var(--background) 72%);
 }
 
+/* Near full-screen on a phone so the card wall gets a band of its own above
+   the copy; a fixed height on desktop, where the two-column layout already
+   gives the wall room on both sides. `vh` first as the fallback for browsers
+   without `svh`. */
+.hero-shell {
+  min-height: 85vh;
+  min-height: 85svh;
+}
+
+/* The veil between the wall and the type. Deliberately close to transparent at
+   the top — that top third is the only place the coaches are meant to be
+   visible — then heavy enough by the time the headline starts that nothing
+   behind it competes. */
+.hero-veil {
+  background: linear-gradient(
+    180deg,
+    rgba(10, 10, 11, 0.04) 0%,
+    rgba(10, 10, 11, 0.2) 22%,
+    rgba(10, 10, 11, 0.82) 44%,
+    var(--background) 62%
+  );
+}
+
+@media (min-width: 1024px) {
+  .hero-shell {
+    min-height: 660px;
+  }
+
+  /* Desktop centres the copy, so the veil has to cover the middle rather than
+     the bottom — and the wall stays readable top and bottom instead. */
+  .hero-veil {
+    background: linear-gradient(
+      180deg,
+      rgba(10, 10, 11, 0.3) 0%,
+      rgba(10, 10, 11, 0.72) 42%,
+      rgba(10, 10, 11, 0.86) 72%,
+      var(--background) 100%
+    );
+  }
+}
+
 /* The coaches' own photos as hero texture. Desaturated and faded to roughly a
    fifth so it registers as depth, not as a gallery — at full colour a wall of
    faces fights the headline and reads as a stock collage. The mask lets the
    mosaic dissolve into the page instead of ending on a hard edge. */
+/* On a phone the wall is the only artwork on screen, so it runs at real
+   strength — but only in the band above the copy, and it is gone by the time
+   the sub-line starts. A photo still showing behind small grey body text is
+   what makes a hero look busy. On desktop it shares the frame with the coach
+   panel, so it drops back to a texture and lasts the whole section. */
 .hero-collage {
-  opacity: 0.24;
+  opacity: 0.62;
   filter: grayscale(1) contrast(1.05);
-  mask-image: linear-gradient(
+  /* Full strength through the first row of cards, then off fast: the second
+     row is only meant to ghost behind the headline for depth, and at any more
+     than that its top edge cuts a visible line across the type. */
+  --collage-mask: linear-gradient(
     180deg,
-    rgba(0, 0, 0, 0.85) 0%,
-    rgba(0, 0, 0, 0.5) 38%,
-    transparent 82%
+    #000 0%,
+    #000 15%,
+    rgba(0, 0, 0, 0.26) 27%,
+    transparent 43%
   );
-  -webkit-mask-image: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.85) 0%,
-    rgba(0, 0, 0, 0.5) 38%,
-    transparent 82%
-  );
+  mask-image: var(--collage-mask);
+  -webkit-mask-image: var(--collage-mask);
+}
+
+@media (min-width: 1024px) {
+  .hero-collage {
+    opacity: 0.26;
+    --collage-mask: linear-gradient(
+      180deg,
+      #000 0%,
+      rgba(0, 0, 0, 0.8) 45%,
+      rgba(0, 0, 0, 0.3) 75%,
+      transparent 97%
+    );
+  }
 }
 
 ::selection {
